@@ -98,8 +98,6 @@ handler builder, which `cmd/website/main.go` deliberately does not carry yet.
 - Every reusable workflow call to `ostendorf-cloud/workflows` is pinned at `v0.2.2`, the latest
   tag that exists at the time this repository was scaffolded, not a floating `v0` major tag:
   `ostendorf-cloud/workflows` has not cut one yet. Repoint at `v0` once it exists.
-- No CodeQL workflow. Code scanning on a private repository needs GitHub Advanced Security,
-  which this account does not have.
 - The Helm chart lives at `charts/ostendorf.dev/`, matching the repository's own name, but its
   `Chart.yaml` `name` and every rendered object name use `ostendorf-dev` instead: a literal dot
   is invalid in a `Service`'s `metadata.name` (RFC 1035 label), which a chart named
