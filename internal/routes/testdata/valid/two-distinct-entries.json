@@ -1,0 +1,4 @@
+[
+  { "name": "home", "slug": "", "file": "index.html" },
+  { "name": "projects", "slug": "projects", "file": "projects/index.html" }
+]

@@ -87,9 +87,10 @@ assert_status "/metrics" "404"
 
 assert_status "/" "200"
 
-# http.FileServerFS canonicalises any request for /index.html to / with a
-# 301 redirect; that is correct, standard net/http behaviour, not a bug.
-assert_status "/index.html" "301"
+# /index.html is not in the route table and is not served from the
+# assets directory either, so it is an unknown path: the site's own 404
+# page, the same as any other path this site does not serve.
+assert_status "/index.html" "404"
 
 if [[ $fail -ne 0 ]]; then
   echo "smoke test failed" >&2

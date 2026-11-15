@@ -4,22 +4,29 @@ import (
 	"io/fs"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"testing"
 
 	"github.com/ostendorf-cloud/govue/health"
+
+	"github.com/ostendorf-cloud/ostendorf.dev/internal/config"
 )
 
-// TestEmbeddedDistBuildsAWorkingHandler proves the embedded dist filesystem is
-// shaped the way buildHandler expects, without starting a server or binding a
-// port: a build with an empty or mis-shaped frontend build fails here instead
-// of at a request.
+func testCfg() config.Config {
+	return config.Config{SiteURL: &url.URL{Scheme: "https", Host: "ostendorf.dev"}}
+}
+
+// TestEmbeddedDistBuildsAWorkingHandler proves the embedded dist and
+// prerendered filesystems are shaped the way buildHandler expects, without
+// starting a server or binding a port: a build with an empty or mis-shaped
+// frontend build fails here instead of at a request.
 func TestEmbeddedDistBuildsAWorkingHandler(t *testing.T) {
 	dist, err := fs.Sub(distFS, "dist")
 	if err != nil {
 		t.Fatalf("fs.Sub(distFS, \"dist\") error = %v", err)
 	}
 
-	if _, err := buildHandler(); err != nil {
+	if _, err := buildHandler(testCfg()); err != nil {
 		t.Fatalf("buildHandler() error = %v", err)
 	}
 

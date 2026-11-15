@@ -29,6 +29,9 @@ func TestLoadAppliesDefaultsWhenEverythingIsUnset(t *testing.T) {
 	if cfg.AdminAddr != ":8081" {
 		t.Errorf("AdminAddr = %q, want %q", cfg.AdminAddr, ":8081")
 	}
+	if cfg.SiteURL.String() != DefaultSiteURL {
+		t.Errorf("SiteURL = %q, want %q", cfg.SiteURL.String(), DefaultSiteURL)
+	}
 	if cfg.LogLevel != slog.LevelInfo {
 		t.Errorf("LogLevel = %v, want %v", cfg.LogLevel, slog.LevelInfo)
 	}
@@ -57,6 +60,15 @@ func TestLoadOverridesEachVariable(t *testing.T) {
 			check: func(t *testing.T, cfg Config) {
 				if cfg.AdminAddr != ":9091" {
 					t.Errorf("AdminAddr = %q, want %q", cfg.AdminAddr, ":9091")
+				}
+			},
+		},
+		{
+			name: "SITE_URL",
+			env:  map[string]string{"SITE_URL": "https://staging.ostendorf.dev"},
+			check: func(t *testing.T, cfg Config) {
+				if cfg.SiteURL.String() != "https://staging.ostendorf.dev" {
+					t.Errorf("SiteURL = %q, want %q", cfg.SiteURL.String(), "https://staging.ostendorf.dev")
 				}
 			},
 		},
@@ -96,5 +108,17 @@ func TestLoadRejectsAnInvalidLogLevel(t *testing.T) {
 	}
 	if !strings.Contains(err.Error(), "verbose") {
 		t.Errorf("Load() error = %q, want it to name the invalid value", err.Error())
+	}
+}
+
+func TestLoadRejectsAnInvalidSiteURL(t *testing.T) {
+	t.Parallel()
+
+	_, err := Load(env(map[string]string{"SITE_URL": "not-a-url"}))
+	if err == nil {
+		t.Fatal("Load() error = nil, want an error for an invalid SITE_URL")
+	}
+	if !strings.Contains(err.Error(), "SITE_URL") {
+		t.Errorf("Load() error = %q, want it to name SITE_URL", err.Error())
 	}
 }

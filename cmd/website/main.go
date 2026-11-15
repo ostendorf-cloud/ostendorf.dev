@@ -15,6 +15,7 @@ import (
 	"github.com/ostendorf-cloud/govue/metrics"
 
 	"github.com/ostendorf-cloud/ostendorf.dev/internal/config"
+	"github.com/ostendorf-cloud/ostendorf.dev/internal/webapp"
 )
 
 func main() {
@@ -32,7 +33,7 @@ func run() error {
 
 	logger := logging.New(os.Stdout, cfg.LogLevel)
 
-	handler, err := buildHandler()
+	handler, err := buildHandler(cfg)
 	if err != nil {
 		return err
 	}
@@ -56,18 +57,21 @@ func run() error {
 	})
 }
 
-// buildHandler serves the embedded SPA bundle. A real application replaces
-// this with its own handler-building package, adding its own API routes and
-// whatever middleware govue pieces it needs; see AGENTS.md.
-func buildHandler() (http.Handler, error) {
+// buildHandler serves the embedded SPA bundle's assets and the
+// prerendered HTML per route, through internal/webapp. A real application
+// adding a session, a form or a rate limiter wires govue's own middleware
+// pieces in here too; see AGENTS.md.
+func buildHandler(cfg config.Config) (http.Handler, error) {
 	dist, err := fs.Sub(distFS, "dist")
 	if err != nil {
 		return nil, fmt.Errorf("website: %w", err)
 	}
+	prerendered, err := fs.Sub(prerenderedFS, "prerendered")
+	if err != nil {
+		return nil, fmt.Errorf("website: %w", err)
+	}
 
-	mux := http.NewServeMux()
-	mux.Handle("/", http.FileServerFS(dist))
-	return mux, nil
+	return webapp.NewHandler(webapp.Config{SiteURL: cfg.SiteURL}, dist, prerendered)
 }
 
 // buildAdminHandler serves govue's admin listener: liveness, readiness and

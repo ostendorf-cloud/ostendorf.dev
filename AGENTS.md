@@ -10,21 +10,65 @@ application.
 ## Layout
 
 - `cmd/website` wires the service: config, construction and shutdown. `embed.go` embeds `dist/`
-  (the built SPA, written by `task web:build`); it sits under `cmd/` rather than `internal/`
-  because `go:embed` resolves relative to the file holding the directive. `main.go` serves that
-  bundle on the public listener and govue's health, readiness and metrics on a second,
-  administrative listener (`httpserver.RunAdmin`).
+  (the built SPA, written by `task web:build`) and `prerendered/` (the static HTML per route,
+  written by `task prerender`); both sit under `cmd/` rather than `internal/` because `go:embed`
+  resolves relative to the file holding the directive. `main.go` builds `internal/webapp`'s
+  handler on the public listener and serves govue's health, readiness and metrics on a second,
+  administrative listener (`httpserver.RunAdmin`). `routes_test.go` and `thirdparty_test.go` read
+  the real, generated `dist/` and `prerendered/` output rather than the source that produced it;
+  see their own two bullets below.
 - `internal/config` loads and validates the website's own environment once, aggregated into
-  one error. There is no secret-shaped variable yet: no session, no OIDC, no CSRF and no form
-  exist in this milestone.
+  one error. `SiteURL` (`SITE_URL`, default `https://ostendorf.dev`) is the base
+  `internal/webapp`'s `robots.txt` and `sitemap.xml` build every URL from. There is no
+  secret-shaped variable yet: no session, no OIDC, no CSRF and no form exist in this milestone.
 - `internal/depsync` checks that `go.mod` and `web/package.json` pin the same govue version, and
   that `web/pnpm-lock.yaml` still resolves govue's Vue package to its `web/` subdirectory; see
   "govue's two halves move together" below.
-- `web/` is the Vue SPA, consuming govue's Vue package as a pnpm git dependency. `web/src/App.vue`
-  is the one placeholder page this milestone ships. `web/src/theme/ostendorf-dev.css` fills
-  govue's design token contract with a neutral, dark-first placeholder palette, checked against
-  WCAG 2.2 AA by `web/src/theme/contrast.test.ts`; see that file's own comment for why it is not
-  the final brand.
+- `internal/routes` is the website's one route table: `routes.json`, checked in and embedded
+  through `//go:embed`, lists every page as a name, a slug and the prerendered file that answers
+  it. `internal/webapp`, `web/scripts/prerender.ts`, and the frontend's own `web/src/router/index.ts`
+  and `web/src/lib/seo.ts`, through the shared `web/src/lib/routeTable.ts`, each read this one
+  file to build their own list instead of restating it, so a page added to one side and not the
+  other can no longer happen. `routes.go`'s `Parse` rejects a table with a missing name or file,
+  or a repeated name, slug or file, before any of those five consumers ever sees it;
+  `routeTable.ts`'s own `validateRouteTable` enforces the exact same three rules for the frontend,
+  which reads `routes.json` through Vite's JSON import rather than through Go, so it has no Go
+  validation to inherit. `internal/routes/testdata/{valid,invalid}` holds the fixtures both
+  `routes_test.go` and `routeTable.test.ts` read, so a fixture either side adds is checked by both
+  validators without touching the other test file.
+- `internal/webapp` builds the website's one HTTP handler from `internal/routes`' table:
+  `pages.go`'s `routeFiles` indexes that table by slug, registers one `http.ServeMux` pattern per
+  route (`registerRoutes`), serves the built SPA's content hashed assets as immutable, and falls
+  back to the site's own prerendered 404 page for anything else, canonicalising a missing
+  trailing slash first. `sitemap.go` serves `/robots.txt` and `/sitemap.xml` from that same
+  `routeFiles`, so neither can list or allow a route the handler does not actually serve. That a
+  page added to `routes.json` actually gets prerendered, rather than merely agreeing with Go's own
+  copy of a list that no longer exists, is what `cmd/website`'s
+  `TestPrerenderedOutputMatchesRouteTable` checks (`task test:routes`): it walks the real output
+  `task prerender` wrote and compares it against `internal/routes`, catching both a route with no
+  prerendered file and a prerendered file that answers no route.
+- `cmd/website`'s `TestBuiltOutputMakesNoThirdPartyRequest` is the test over the built output that
+  proves this site keeps old_ostendorf.dev's no-third-party-request property (see the top of this
+  file): it reads the real `dist/` and `prerendered/` bytes for every element whose `src` or
+  `href` the browser fetches on its own (`script`, `link` with a fetching `rel`, `img`, `source`,
+  `iframe`, `video`, `audio`, `embed`, `object`) and every CSS `@import`/`url()`, and fails on an
+  absolute `http(s)://` reference. A plain `<a href>` is deliberately excluded: the home page's
+  own links to GitHub, LinkedIn and a `mailto:` address are the visitor's own choice to follow,
+  not a request the page causes by itself.
+- `web/` is the Vue SPA, consuming govue's Vue package as a pnpm git dependency.
+  `web/src/router/index.ts` builds one `vue-router` route per `internal/routes` entry;
+  `web/src/lib/seo.ts` resolves each route's title, meta description and canonical URL the same
+  way. `web/src/App.vue` is the page shell: `GovueSkipLink`, `AppHeader` (brand, `GovueNav`,
+  `ThemeToggle`), `<router-view>`, `AppFooter`. `ThemeToggle.vue` cycles govue's `useTheme` mode
+  (light, dark, system) rather than hand rolling a theme switch. `web/src/views/HomeView.vue` is
+  the one real page this milestone ships: the predecessor's own heading and profile links (see
+  "Linking to the sibling sites" below), nothing more; `NotFoundView.vue` answers every path the
+  route table does not know. `web/scripts/prerender.ts` is the static site generation step
+  `task prerender` runs, reading the same route table through `routeTable.ts`.
+  `web/src/theme/ostendorf-dev.css` fills govue's design token contract with a neutral,
+  dark-first placeholder palette, checked against WCAG 2.2 AA by
+  `web/src/theme/contrast.test.ts`; see that file's own comment for why it is not the final
+  brand.
 - `charts/ostendorf.dev/` is the Helm chart. Its `Chart.yaml` `name` and every rendered object
   name use `ostendorf-dev` instead of `ostendorf.dev`: a literal dot is invalid in a `Service`'s
   `metadata.name` (RFC 1035 label), which a chart named after the repository directly would
@@ -34,15 +78,26 @@ application.
   metrics on the admin listener and a request on the public one; the `docker-build` job in
   `.github/workflows/checks.yaml` runs it right after building the image.
 
+## Linking to the sibling sites
+
+ostendorf.dev's own navigation and footer carry no link to simon-ostendorf.de or ostendorf.tech.
+`docs/concepts/ostendorf-dev.md` already settles the boundary between the three sites:
+simon-ostendorf.de is the neutral hub that carries the identity-level summary and the outbound
+links to the other two, and ostendorf.tech and ostendorf.dev each carry the deep, domain specific
+content only. A footer or nav link here to either sibling would restate what the hub already
+does, the exact thing that boundary says this site should not do. `AppFooter.vue`'s own comment
+points back here.
+
 ## A build needs the frontend first
 
-`cmd/website` cannot compile against an empty `dist/`, because `go:embed` fails when its pattern
-matches no file at all. `dist/` is gitignored, generated by `task web:build`.
+`cmd/website` cannot compile against an empty `dist/` or `prerendered/`, because `go:embed` fails
+when its pattern matches no file at all. Both are gitignored, generated by `task web:build` and
+`task prerender` respectively.
 
 `task build` and `task test:go` both declare that dependency, so running either one through Task
 always populates the frontend first. A bare `go build ./cmd/website` or `go test ./cmd/website/...`
 outside Task fails on a fresh checkout for that reason; run `task build` or `task test:go` instead,
-or `task web:build` once by hand before reaching for the Go toolchain directly.
+or `task web:build && task prerender` once by hand before reaching for the Go toolchain directly.
 
 ## govue's two halves move together
 
@@ -74,9 +129,11 @@ task check
 
 ## Scope of this milestone
 
-This scaffold is the smallest complete, verifiable repository: the Go entry point, the Vue
-shell, the Helm chart, the container and the CI pipeline. None of the site's actual content is
-implemented yet. Left out, tracked as later milestones:
+The page shell, the one route table and prerendering are implemented: the navigation, the
+footer, the theme switch, the home page's own heading and the predecessor's profile links,
+`robots.txt`/`sitemap.xml`, the site's own 404 page, and the no-third-party-request test over the
+built output. None of the site's other content is implemented yet. Left out, tracked as later
+milestones, each adding its own route to `internal/routes/routes.json` and its own nav item:
 
 - Projects, pulled from the GitHub API and merged with hand written descriptions from the `cv`
   repository.
@@ -85,9 +142,10 @@ implemented yet. Left out, tracked as later milestones:
   delivery, no third party.
 - A uses page: setup, tools, homelab.
 
-Each of these will need its own configuration: `internal/config` exists already, but carries
-none of these features' settings yet, and each will also need its own `internal/webapp`-shaped
-handler builder, which `cmd/website/main.go` deliberately does not carry yet.
+Each of these adds a view, a route table entry and a nav item onto the shell this milestone
+built; the contact form also needs its own configuration (`internal/config` carries none of its
+settings yet) and its own API routes on `internal/webapp`'s handler, plus the session manager and
+CSRF protector the concept doc describes, none of which exist yet.
 
 ## Deviations
 
