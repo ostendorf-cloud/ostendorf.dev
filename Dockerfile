@@ -1,8 +1,9 @@
 # syntax=docker/dockerfile:1@sha256:4edf897a3ffa55b89f906fc8cc78afdb3f1834cc9c7083565e611a8a7d5fe99e
 
-# Frontend stage: builds the Vue SPA bundle straight into cmd/website/dist, the
-# same path "task web:build" writes to locally. The Go build stage below only
-# ever copies that directory out, never runs Node itself.
+# Frontend stage: builds the Vue SPA bundle and the prerendered HTML straight
+# into cmd/website/dist and cmd/website/prerendered, the same paths
+# "task web:build" and "task prerender" write to locally. The Go build stage
+# below only ever copies those two directories out, never runs Node itself.
 #
 # Digest for node:26.13.1-bookworm-slim (linux/amd64); re-resolve with
 # "docker buildx imagetools inspect node:26.13.1-bookworm-slim" if this patch
@@ -24,7 +25,13 @@ RUN pnpm install --frozen-lockfile
 
 COPY web/ ./
 
-RUN pnpm run build
+# The frontend reads the one route table out of internal/routes, through
+# web/src/lib/routeTable.ts, so this stage needs that file as well as web/
+# itself. It lives outside web/ because Go embeds the same file; see
+# AGENTS.md on why there is only one of it.
+COPY internal/routes/routes.json /src/internal/routes/routes.json
+
+RUN pnpm run build && pnpm run prerender
 
 # Digest for golang:1.27.4-bookworm (linux/amd64), matching mise.toml's pinned
 # Go patch exactly; resolved against Docker Hub's API.
@@ -38,6 +45,7 @@ RUN go mod download
 COPY cmd/ cmd/
 COPY internal/ internal/
 COPY --from=frontend /src/cmd/website/dist cmd/website/dist
+COPY --from=frontend /src/cmd/website/prerendered cmd/website/prerendered
 
 RUN CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/website ./cmd/website
 

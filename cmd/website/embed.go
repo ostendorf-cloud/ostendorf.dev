@@ -8,3 +8,9 @@ import "embed"
 //
 //go:embed dist
 var distFS embed.FS
+
+// prerenderedFS is the static HTML for every route, written by
+// "task prerender" after dist exists.
+//
+//go:embed prerendered
+var prerenderedFS embed.FS

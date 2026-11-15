@@ -1,35 +1,40 @@
 import { render, screen } from '@testing-library/vue'
 import { describe, expect, it } from 'vitest'
+import { createMemoryHistory } from 'vue-router'
 
 import App from './App.vue'
+import { createAppRouter } from './router'
+
+async function renderApp(path = '/') {
+  const router = createAppRouter(createMemoryHistory())
+  await router.push(path)
+  await router.isReady()
+  return render(App, { global: { plugins: [router] } })
+}
 
 describe('App', () => {
-  it('renders the one placeholder page with its heading', () => {
-    render(App)
+  it('has a skip link targeting the main landmark', async () => {
+    await renderApp()
+
+    expect(screen.getByRole('link', { name: 'Skip to content' })).toHaveAttribute('href', '#main')
+  })
+
+  it('carries the header and the footer around whichever page the router resolves', async () => {
+    await renderApp()
+
+    expect(screen.getByRole('banner')).toBeVisible()
+    expect(screen.getByRole('contentinfo')).toBeVisible()
+  })
+
+  it('renders the home page at the root path', async () => {
+    await renderApp('/')
 
     expect(screen.getByRole('heading', { level: 1, name: 'Simon Ostendorf' })).toBeVisible()
   })
 
-  it('carries the real profile and contact links from the predecessor site', () => {
-    render(App)
+  it('renders the 404 page for a path the route table does not know', async () => {
+    await renderApp('/this-page-does-not-exist/')
 
-    expect(screen.getByRole('link', { name: 'GitHub' })).toHaveAttribute(
-      'href',
-      'https://github.com/simonostendorf',
-    )
-    expect(screen.getByRole('link', { name: 'LinkedIn' })).toHaveAttribute(
-      'href',
-      'https://www.linkedin.com/in/simonostendorf',
-    )
-    expect(screen.getByRole('link', { name: 'Email' })).toHaveAttribute(
-      'href',
-      'mailto:simon.ostendorf@stackmeister.com',
-    )
-  })
-
-  it('has a skip link targeting the main landmark', () => {
-    render(App)
-
-    expect(screen.getByRole('link', { name: 'Skip to content' })).toHaveAttribute('href', '#main')
+    expect(screen.getByRole('heading', { level: 1, name: 'Page not found' })).toBeVisible()
   })
 })

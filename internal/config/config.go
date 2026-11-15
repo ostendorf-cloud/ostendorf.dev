@@ -6,10 +6,15 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"net/url"
 
 	"github.com/ostendorf-cloud/govue/envconf"
 	"github.com/ostendorf-cloud/govue/logging"
 )
+
+// DefaultSiteURL is this site's own public origin, used when SITE_URL is
+// unset: the base every robots.txt and sitemap.xml URL is built from.
+const DefaultSiteURL = "https://ostendorf.dev"
 
 // Config is every setting this binary reads from the environment. There is
 // no secret-shaped field yet: this site serves a static SPA bundle and the
@@ -22,7 +27,10 @@ type Config struct {
 	// /metrics, reached only from inside the cluster, never through the
 	// chart's own Ingress.
 	AdminAddr string
-	LogLevel  slog.Level
+	// SiteURL is the site's own public origin, the base every sitemap
+	// and robots.txt URL is built from.
+	SiteURL  *url.URL
+	LogLevel slog.Level
 }
 
 // Load reads every setting through envconf, so a misconfigured deployment
@@ -33,6 +41,7 @@ func Load(getenv func(string) string) (Config, error) {
 	cfg := Config{
 		Addr:      l.String("ADDR", ":8080"),
 		AdminAddr: l.String("ADMIN_ADDR", ":8081"),
+		SiteURL:   l.URL("SITE_URL", DefaultSiteURL),
 	}
 
 	var problems []error
