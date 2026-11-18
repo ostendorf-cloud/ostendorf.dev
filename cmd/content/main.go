@@ -23,6 +23,10 @@ import (
 	"github.com/ostendorf-cloud/ostendorf.dev/internal/content"
 )
 
+// sleepFn waits between retries. Nil is the real wait. A test replaces it so a
+// failing GitHub run does not sit through the backoff.
+var sleepFn func(context.Context, time.Duration) error
+
 const defaultOut = "internal/content/generated/" + content.DatasetFile
 
 func main() {
@@ -41,7 +45,9 @@ func realMain() int {
 
 // run is main without the process around it, so a test can drive it.
 //
-// Environment: CV_RELEASE_TAG is the pinned cv release. GITHUB_TOKEN is read
+// Environment: CV_RELEASE_TAG is the pinned cv release, and
+// CV_RELEASE_SHA256_DE and CV_RELEASE_SHA256_EN are the digests of its two
+// artefacts, all three from cv-release.env. GITHUB_TOKEN is read
 // when set and is optional, since public data needs no scope. SOURCE_DATE_EPOCH
 // fixes the clock for a reproducible build.
 func run(ctx context.Context, args []string, getenv func(string) string, stderr io.Writer) error {
@@ -67,14 +73,21 @@ func run(ctx context.Context, args []string, getenv func(string) string, stderr 
 		now = func() time.Time { return time.Unix(secs, 0) }
 	}
 
+	local := *artefactDir != ""
 	tag := getenv("CV_RELEASE_TAG")
-	if err := content.ValidateTag(tag); err != nil {
-		return err
+	digests := map[string]string{}
+	for _, lang := range content.Languages {
+		digests[lang] = getenv(content.DigestEnv(lang))
+	}
+	if !local {
+		if err := content.ValidateTag(tag); err != nil {
+			return err
+		}
 	}
 
 	var artefacts map[string][]byte
 	var err error
-	if *artefactDir != "" {
+	if local {
 		artefacts, err = content.ReadArtefacts(*artefactDir)
 	} else {
 		artefacts, err = content.DownloadArtefacts(ctx, nil, *cvBase, tag)
@@ -98,10 +111,13 @@ func run(ctx context.Context, args []string, getenv func(string) string, stderr 
 		BaseURL: *githubAPI,
 		HTTP:    &http.Client{Timeout: 15 * time.Second},
 		Token:   getenv("GITHUB_TOKEN"),
+		Sleep:   sleepFn,
 		Log:     logger,
 	}
 	data, err := content.Generate(ctx, content.Options{
 		Tag:        tag,
+		Digests:    digests,
+		Local:      local,
 		Artefacts:  artefacts,
 		GitHub:     client,
 		Previous:   prev,

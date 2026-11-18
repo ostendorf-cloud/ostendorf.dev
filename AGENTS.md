@@ -133,12 +133,22 @@ every repository the artefact's `projects` name, merges both and writes
 token, makes no call and has no new failure mode beyond a missing dataset, which the Dockerfile
 refuses to build.
 
-- The pin is a release tag. `ValidateTag` accepts a version tag such as `v1.0.0` and rejects
-  `latest`, a branch or an empty value. There is no lock file with artefact hashes: Renovate cannot
-  compute one, so every bump would need a person. The immutable release is the trust anchor, and
-  the dataset records the sha256 of each artefact it read (`source.cv.sha256`). The pin is empty
-  until the cv repository publishes its first release, so `task content:build`, `task build` and
-  the CI jobs that call them fail with "no cv release is pinned" until a person sets it.
+- The pin is a release tag plus the sha256 of both artefacts, all in `cv-release.env`:
+  `CV_RELEASE_TAG`, `CV_RELEASE_SHA256_DE`, `CV_RELEASE_SHA256_EN`. `ValidateTag` accepts a
+  version tag such as `v1.0.0` and rejects `latest`, a branch, an empty value and anything that
+  could change a URL path. The tag alone is not immutable: this repository does not rely on
+  immutable cv releases, so a moved tag or a replaced asset would change the build silently. The
+  trust anchor is therefore the two digests in this repository. `CheckDigest` refuses a mismatch,
+  an empty digest next to a set tag, and a value that is not 64 hex digits (upper case is
+  accepted). The message names `cv-release.env` and the tag and prints the two digests, nothing
+  more. The dataset also records the digests it read (`source.cv.sha256`). Bumps are manual: no
+  Renovate manager covers the file. To bump, download both assets of the new release, run
+  `sha256sum cv.de.json cv.en.json` over them, and set the tag and both digests together in one
+  commit. The pin is empty until the cv repository publishes its first release, so
+  `task content:build`, `task build` and the CI jobs that call them fail with "no cv release is
+  pinned" until a person sets it. No sample fallback exists on purpose: failing loudly is right.
+  With `-artefact-dir` the build reads local files, checks no tag or digest, and records
+  `source.cv.release` as `local`.
 - The artefact's `schema_version` is checked first. Only version 1 is read. Any other version
   fails the build and names the version and the fix. Unknown keys are ignored, so cv adding an
   optional key needs no change here. The sections cv appends after `contact` (`volunteering`,
@@ -146,13 +156,27 @@ refuses to build.
   `grade`, `location` and `employment_type` are dropped until a page needs one: add the typed
   field to `internal/content/artefact.go` then. `certificates[].valid_until` is nullable.
 - GitHub is called with `net/http`, 3 calls per repository (repository, languages, latest
-  release), only for repositories named in the artefact. No listing call exists. Public data
-  needs no token scope: `GITHUB_TOKEN` is read from the environment when set, CI sets it from
-  `secrets.GITHUB_TOKEN` on the content step only, and the Dockerfile has no build argument for
-  it. It is sent as a bearer header and appears in no error, log line or output, which the
-  tests assert. A rate limit (429, or 403 with `Retry-After` or an exhausted quota) is waited out
-  up to two minutes and fails beyond that. A 5xx or a timeout retries 4 times with a 1, 2 and 4
-  second backoff.
+  release), only for repositories named in the artefact. No listing call exists. A name must
+  pass `ValidateRepo` (GitHub's owner rule, a repository name rule, no `.` or `..` segment) and
+  each path segment is escaped. The response's `full_name` must equal the requested name, case
+  insensitively: a renamed or transferred repository fails the build instead of showing its new
+  owner silently. Public data needs no token scope: `GITHUB_TOKEN` is read from the environment
+  when set, CI sets it from `secrets.GITHUB_TOKEN` on the content step only, and the Dockerfile
+  has no build argument for it. It is sent as a bearer header and appears in no error, log line
+  or output, which the tests assert. The `publish.yaml` image job holds `packages: write`, so
+  that step's token carries it too: the step-scoped environment is the only limit, and the
+  content step runs no code beyond `cmd/content`. A rate limit (429, or 403 with `Retry-After`
+  or an exhausted quota) is waited out up to two minutes and fails beyond that. A 5xx or a
+  timeout makes up to 4 attempts, so 3 retries, after a 1, 2 and 4 second backoff. The whole
+  GitHub phase has a 3 minute deadline and fails with a clear message, so a slow API never ends
+  as a CI job timeout.
+- Redirects: both clients follow at most 5 hops, to https only. The API client follows only to
+  the API host. The release download follows only to the host it started at and to
+  `ReleaseRedirectHosts` (`github.com`, `objects.githubusercontent.com`,
+  `release-assets.githubusercontent.com`). The current CDN names were not verified live: if
+  GitHub moves its asset CDN the build fails with a refused redirect naming the host, and that
+  variable is the one place to extend after checking. `Authorization` is dropped on any host
+  change, and the download never sends the token at all: the release assets are public.
 - Schema check of the merged dataset, decided: no JSON Schema file. The dataset is written from
   Go types, and `ParseDataset` reads it back strictly (unknown key, wrong version, a project
   without GitHub data and a stale flag without a reason all fail) on the bytes `Generate` just
@@ -162,7 +186,8 @@ refuses to build.
   version, always fails the build. A failed GitHub call fails the build by default, because a
   silent partial dataset is the worst outcome. A rebuild may opt in with
   `-allow-stale -previous <earlier dataset.json>`: then all GitHub data comes from that earlier
-  dataset, only if it is at most 14 days old and covers every repository, and the dataset says so
+  dataset, only if its `source.github.fetched_at` (not `generated_at`) is at most 14 days old and
+  not in the future, and it covers every repository, and the dataset says so
   in `source.github.stale`, `stale_reason` and the original `fetched_at`. The fallback is all or
   nothing. No workflow enables it today, because no earlier dataset is kept anywhere yet. A
   scheduled rebuild that wants it has to supply one, for example from a cache.
@@ -179,8 +204,8 @@ refuses to build.
 ### A cv release does not reach the site by itself
 
 The dataset is built, not fetched at runtime. A new cv release reaches the site only when this
-repository rebuilds with the new tag in `cv-release.env`. A person bumps that pin: no Renovate
-manager for the file is configured. Publishing a release of this repository then builds and
+repository rebuilds with the new tag and digests in `cv-release.env`. A person bumps that pin, see
+above. Publishing a release of this repository then builds and
 pushes the image (`publish.yaml`). Nothing in the cv repository triggers a rebuild yet: a
 `repository_dispatch` from cv's release workflow is not set up and is out of scope here. GitHub
 data (stars, releases, pushes) is as old as the last build for the same reason.

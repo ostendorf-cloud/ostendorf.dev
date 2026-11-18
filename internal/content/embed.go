@@ -14,5 +14,5 @@ var generatedFS embed.FS
 
 // Embedded returns the dataset compiled into the binary.
 func Embedded() (Dataset, error) {
-	return loadFrom(generatedFS)
+	return Load(generatedFS)
 }

@@ -5,11 +5,11 @@
 package content
 
 import (
-	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"regexp"
+	"strings"
 )
 
 // SupportedSchemaVersion is the only cv artefact schema version this package
@@ -27,10 +27,30 @@ func ArtefactFileName(lang string) string {
 	return "cv." + lang + ".json"
 }
 
-// repoPattern is the owner/name form of a public GitHub repository. It is also
-// what keeps a path segment from ever carrying anything but a repository name
-// into a request URL.
-var repoPattern = regexp.MustCompile(`^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$`)
+var (
+	// ownerPattern is GitHub's rule for a user or organisation name: letters and
+	// digits, single hyphens inside, none at either end.
+	ownerPattern = regexp.MustCompile(`^[A-Za-z0-9]+(-[A-Za-z0-9]+)*$`)
+	// repoNamePattern is the rule for a repository name: letters, digits, dot,
+	// underscore and hyphen.
+	repoNamePattern = regexp.MustCompile(`^[A-Za-z0-9._-]+$`)
+)
+
+// ValidateRepo checks the owner/name form of a public GitHub repository. It is
+// what keeps a request path from ever carrying anything but one owner and one
+// repository name: no dot segment, no slash, no escape, no query.
+func ValidateRepo(name string) error {
+	owner, repo, ok := strings.Cut(name, "/")
+	switch {
+	case !ok:
+		return fmt.Errorf("%q is not owner/name", name)
+	case len(owner) > 39 || !ownerPattern.MatchString(owner):
+		return fmt.Errorf("%q: owner is not a GitHub account name", name)
+	case len(repo) > 100 || repo == "." || repo == ".." || !repoNamePattern.MatchString(repo):
+		return fmt.Errorf("%q: repository name is not a GitHub repository name", name)
+	}
+	return nil
+}
 
 // Document is one language's CV data. The artefact parser fills every field
 // except Project.GitHub, and the merge fills that one. Unknown keys in an
@@ -169,7 +189,7 @@ func ParseArtefact(data []byte, lang string) (Document, error) {
 	}
 
 	var doc artefactDocument
-	if err := json.NewDecoder(bytes.NewReader(data)).Decode(&doc); err != nil {
+	if err := decodeOne(data, &doc, false); err != nil {
 		return Document{}, fmt.Errorf("cv artefact %s: %w", lang, err)
 	}
 	if doc.Language != lang {
@@ -229,8 +249,8 @@ func (d *Document) validate() error {
 			errs = append(errs, fmt.Errorf("projects[%d]: id %q appears twice", i, p.ID))
 		}
 		seen[p.ID] = true
-		if !repoPattern.MatchString(p.GithubRepo) {
-			errs = append(errs, fmt.Errorf("projects[%d] %q: github_repo %q is not owner/name", i, p.ID, p.GithubRepo))
+		if err := ValidateRepo(p.GithubRepo); err != nil {
+			errs = append(errs, fmt.Errorf("projects[%d] %q: github_repo: %w", i, p.ID, err))
 		}
 	}
 	return errors.Join(errs...)

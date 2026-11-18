@@ -20,13 +20,27 @@ type RepoSource interface {
 // it is refused as well.
 const DefaultMaxStaleAge = 14 * 24 * time.Hour
 
+// DefaultGitHubTimeout bounds the whole GitHub phase of one build, so a slow or
+// rate limited API ends as a clear error instead of a CI job timeout.
+const DefaultGitHubTimeout = 3 * time.Minute
+
 // Options is everything Generate needs. Nothing in it reads the environment or
 // the network by itself.
 type Options struct {
 	// Tag is the pinned cv release, recorded in the dataset.
 	Tag string
+	// Digests is the sha256 pinned in cv-release.env for each language's
+	// artefact. A mismatch or an empty value fails the build.
+	Digests map[string]string
+	// Local marks artefacts read from a local directory, not from the pinned
+	// release. No tag and no digest is checked, and the dataset records the
+	// release as "local" so its provenance is not misleading.
+	Local bool
 	// Artefacts is the raw artefact per language.
 	Artefacts map[string][]byte
+	// GitHubTimeout bounds the whole GitHub phase, every request and every wait
+	// together, DefaultGitHubTimeout when zero.
+	GitHubTimeout time.Duration
 	// GitHub fetches the repository data.
 	GitHub RepoSource
 	// Previous is an earlier dataset, the last known good one. It is read only
@@ -53,7 +67,10 @@ type Options struct {
 // dataset carries that data with stale set and the reason. The fallback is all
 // or nothing, so a partial dataset never comes out.
 func Generate(ctx context.Context, o Options) ([]byte, error) {
-	if err := ValidateTag(o.Tag); err != nil {
+	release := o.Tag
+	if o.Local {
+		release = "local"
+	} else if err := ValidateTag(o.Tag); err != nil {
 		return nil, err
 	}
 	now := time.Now
@@ -74,6 +91,12 @@ func Generate(ctx context.Context, o Options) ([]byte, error) {
 			errs = append(errs, fmt.Errorf("cv artefact %s: missing", lang))
 			continue
 		}
+		if !o.Local {
+			if err := CheckDigest(lang, o.Tag, raw, o.Digests[lang]); err != nil {
+				errs = append(errs, err)
+				continue
+			}
+		}
 		doc, err := ParseArtefact(raw, lang)
 		if err != nil {
 			errs = append(errs, err)
@@ -89,7 +112,16 @@ func Generate(ctx context.Context, o Options) ([]byte, error) {
 
 	names := repoNames(docs)
 	fetchedAt := now().UTC()
-	repos, err := o.GitHub.FetchRepos(ctx, names)
+	timeout := o.GitHubTimeout
+	if timeout <= 0 {
+		timeout = DefaultGitHubTimeout
+	}
+	fctx, cancel := context.WithTimeout(ctx, timeout)
+	defer cancel()
+	repos, err := o.GitHub.FetchRepos(fctx, names)
+	if err != nil && ctx.Err() == nil && fctx.Err() != nil {
+		err = fmt.Errorf("the GitHub phase exceeded its overall deadline of %s: %w", timeout, err)
+	}
 	gh := GitHubSource{FetchedAt: fetchedAt.Format(time.RFC3339)}
 	if err != nil {
 		if !o.AllowStale {
@@ -125,7 +157,7 @@ func Generate(ctx context.Context, o Options) ([]byte, error) {
 		Source: Source{
 			CV: CVSource{
 				Repository:    CVRepository,
-				Release:       o.Tag,
+				Release:       release,
 				SchemaVersion: SupportedSchemaVersion,
 				SHA256:        digests,
 			},
@@ -178,7 +210,11 @@ func previousRepos(prev []byte, want []string, now time.Time, maxAge time.Durati
 	if maxAge <= 0 {
 		maxAge = DefaultMaxStaleAge
 	}
-	if age := now.Sub(fetched); age > maxAge {
+	age := now.Sub(fetched)
+	if age < 0 {
+		return nil, time.Time{}, fmt.Errorf("previous dataset's GitHub data claims to be fetched at %s, which is in the future", fetched.Format(time.RFC3339))
+	}
+	if age > maxAge {
 		return nil, time.Time{}, fmt.Errorf("previous dataset's GitHub data is %s old, the limit is %s", age.Round(time.Hour), maxAge)
 	}
 	have := map[string]*Repo{}

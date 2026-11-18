@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"io/fs"
 	"time"
 )
@@ -69,9 +70,7 @@ func (d Dataset) Encode() ([]byte, error) {
 // writer and the reader cannot drift apart unnoticed. It also runs Validate.
 func ParseDataset(data []byte) (Dataset, error) {
 	var d Dataset
-	dec := json.NewDecoder(bytes.NewReader(data))
-	dec.DisallowUnknownFields()
-	if err := dec.Decode(&d); err != nil {
+	if err := decodeOne(data, &d, true); err != nil {
 		return Dataset{}, fmt.Errorf("dataset: %w", err)
 	}
 	if d.SchemaVersion != DatasetSchemaVersion {
@@ -81,6 +80,22 @@ func ParseDataset(data []byte) (Dataset, error) {
 		return Dataset{}, err
 	}
 	return d, nil
+}
+
+// decodeOne decodes exactly one JSON value into v. Anything after it, a second
+// object or stray text, is an error.
+func decodeOne(data []byte, v any, strict bool) error {
+	dec := json.NewDecoder(bytes.NewReader(data))
+	if strict {
+		dec.DisallowUnknownFields()
+	}
+	if err := dec.Decode(v); err != nil {
+		return err
+	}
+	if err := dec.Decode(&struct{}{}); !errors.Is(err, io.EOF) {
+		return errors.New("unexpected data after the JSON document")
+	}
+	return nil
 }
 
 // Validate checks the dataset's own shape: one document per language, every
@@ -122,8 +137,8 @@ func (d Dataset) Validate() error {
 	return errors.Join(errs...)
 }
 
-// loadFrom reads the dataset out of a generated directory's filesystem.
-func loadFrom(fsys fs.FS) (Dataset, error) {
+// Load reads the dataset out of a filesystem that holds generated/dataset.json.
+func Load(fsys fs.FS) (Dataset, error) {
 	data, err := fs.ReadFile(fsys, "generated/"+DatasetFile)
 	if err != nil {
 		return Dataset{}, fmt.Errorf("content: the embedded dataset is missing, run task content:build: %w", err)

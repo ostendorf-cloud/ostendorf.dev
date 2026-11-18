@@ -32,6 +32,12 @@ func main() {
 }
 
 func run() error {
+	return runWith(content.Embedded)
+}
+
+// runWith is run with the dataset loader passed in, so a test can start the
+// service without the generated file.
+func runWith(loadContent func() (content.Dataset, error)) error {
 	cfg, err := config.Load(os.Getenv)
 	if err != nil {
 		return err
@@ -42,7 +48,7 @@ func run() error {
 	// The dataset is compiled in, so this reads no file and makes no call. It
 	// fails only for a binary built without "task content:build", which the
 	// Dockerfile refuses to produce.
-	dataset, err := content.Embedded()
+	dataset, err := loadContent()
 	if err != nil {
 		return err
 	}
