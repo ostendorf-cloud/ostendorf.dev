@@ -34,6 +34,16 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
 
+      - uses: jdx/mise-action@924e7c586e33d7d4bae9c14e26c5d22e2beb6e78  # v5.3.0
+
+      - name: Build the content dataset
+        # The only step that reaches the cv release and the GitHub API. The
+        # token is the workflow's own read only one and stays out of the image
+        # build: only the generated file reaches the build context.
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: task content:build
+
       - name: Turn the platform into a name an artifact can carry
         id: platform
         env:

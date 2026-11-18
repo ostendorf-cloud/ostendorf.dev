@@ -97,11 +97,11 @@
   `cv` repository's release pipeline next.
 - Where do SMTP credentials and the recipient address live operationally (which secret
   store, which chart values)? Owner: next milestone that implements the contact form.
-- Does the merged build-time dataset need a schema check against `cv`'s JSON release
-  artefact, and where does that check live? Owner: whoever implements the data pipeline.
+- Decided: the merged dataset has no JSON Schema file. The `cv` artefact's `schema_version` is
+  checked on input, and the dataset is read back strictly in the build step. See
+  "The content data pipeline" in `AGENTS.md`.
 - Should ostendorf.dev link to simon-ostendorf.de and ostendorf.tech in its own nav or
   footer, and is there a shared convention for that across all three sites? Owner: not
   yet assigned.
-- What happens to the projects and skills pages when the GitHub API call fails during a
-  build: fail the build, or ship the last known good dataset? Owner: whoever implements
-  the data pipeline.
+- Decided: a failed GitHub call fails the build. A rebuild may opt in to the last known good
+  data, marked stale in the dataset. See "The content data pipeline" in `AGENTS.md`.
