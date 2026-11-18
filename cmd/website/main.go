@@ -15,6 +15,7 @@ import (
 	"github.com/ostendorf-cloud/govue/metrics"
 
 	"github.com/ostendorf-cloud/ostendorf.dev/internal/config"
+	"github.com/ostendorf-cloud/ostendorf.dev/internal/content"
 	"github.com/ostendorf-cloud/ostendorf.dev/internal/webapp"
 )
 
@@ -32,6 +33,18 @@ func run() error {
 	}
 
 	logger := logging.New(os.Stdout, cfg.LogLevel)
+
+	// The dataset is compiled in, so this reads no file and makes no call. It
+	// fails only for a binary built without "task content:build", which the
+	// Dockerfile refuses to produce.
+	dataset, err := content.Embedded()
+	if err != nil {
+		return err
+	}
+	logger.Info("content loaded",
+		"cv_release", dataset.Source.CV.Release,
+		"github_fetched_at", dataset.Source.GitHub.FetchedAt,
+		"github_stale", dataset.Source.GitHub.Stale)
 
 	handler, err := buildHandler(cfg)
 	if err != nil {

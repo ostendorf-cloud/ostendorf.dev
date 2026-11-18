@@ -1,0 +1,112 @@
+{
+  "schema_version": 1,
+  "language": "en",
+  "experience": [
+    {
+      "id": "exp-1",
+      "employer": "Example Employer en",
+      "title": "Engineer en",
+      "start": "2020-01",
+      "end": "2022-01",
+      "summary": "Summary one en."
+    },
+    {
+      "id": "exp-2",
+      "employer": "Other Employer en",
+      "title": "Lead en",
+      "start": "2022-02",
+      "end": null,
+      "summary": null
+    }
+  ],
+  "education": [
+    {
+      "id": "edu-1",
+      "institution": "Example University en",
+      "degree": "Degree en",
+      "start": "2015-10",
+      "end": "2019-06",
+      "summary": "Degree summary en."
+    },
+    {
+      "id": "edu-2",
+      "institution": "Other School en",
+      "degree": "Course en",
+      "start": "2019-09",
+      "end": null,
+      "summary": null
+    }
+  ],
+  "certificates": [
+    {
+      "id": "cert-1",
+      "name": "Certificate en",
+      "issuer": "Example Body en",
+      "issued": "2023-01",
+      "valid_until": "2026-01"
+    }
+  ],
+  "skills": [
+    {
+      "id": "skill-1",
+      "name": "Kubernetes en",
+      "level": "expert",
+      "evidence": [
+        {
+          "type": "certificate",
+          "ref": "cert-1"
+        },
+        {
+          "type": "project",
+          "ref": "proj-1"
+        }
+      ]
+    },
+    {
+      "id": "skill-2",
+      "name": "Go en",
+      "level": "working",
+      "evidence": []
+    }
+  ],
+  "projects": [
+    {
+      "id": "proj-1",
+      "github_repo": "example/repo",
+      "description": "Project text en."
+    }
+  ],
+  "references": [
+    {
+      "id": "ref-1",
+      "name": "Example Person",
+      "role": "Manager en"
+    }
+  ],
+  "languages": [
+    {
+      "id": "lang-1",
+      "name": "English en",
+      "level": "proficient"
+    },
+    {
+      "id": "lang-2",
+      "name": "German en",
+      "level": "expert"
+    }
+  ],
+  "contact": {
+    "email": "contact@example.com",
+    "address": {
+      "street": null,
+      "city": "Example City"
+    },
+    "profiles": [
+      {
+        "id": "github",
+        "platform": "GitHub",
+        "url": "https://github.com/example"
+      }
+    ]
+  }
+}
