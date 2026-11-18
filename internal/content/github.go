@@ -8,6 +8,7 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"net/url"
 	"sort"
 	"strconv"
 	"strings"
@@ -99,11 +100,20 @@ func (c *Client) base() string {
 	return strings.TrimRight(c.BaseURL, "/")
 }
 
+// httpClient returns a copy of the configured client with the redirect policy
+// set: at most 5 hops, https only, and only to the API's own host, so the token
+// never leaves it.
 func (c *Client) httpClient() *http.Client {
-	if c.HTTP == nil {
-		return &http.Client{Timeout: 15 * time.Second}
+	hc := http.Client{Timeout: 15 * time.Second}
+	if c.HTTP != nil {
+		hc = *c.HTTP
 	}
-	return c.HTTP
+	apiHost := ""
+	if u, err := url.Parse(c.base()); err == nil {
+		apiHost = u.Host
+	}
+	hc.CheckRedirect = redirectPolicy(func(u *url.URL) bool { return u.Host == apiHost })
+	return &hc
 }
 
 func (c *Client) attempts() int {
@@ -163,10 +173,11 @@ func (c *Client) FetchRepos(ctx context.Context, names []string) (map[string]*Re
 // FetchRepo fetches the metadata of one public repository: the repository
 // itself, its languages and its latest release.
 func (c *Client) FetchRepo(ctx context.Context, name string) (*Repo, error) {
-	if !repoPattern.MatchString(name) {
-		return nil, fmt.Errorf("%q is not owner/name", name)
+	if err := ValidateRepo(name); err != nil {
+		return nil, err
 	}
-	base := "/repos/" + name
+	owner, repoName, _ := strings.Cut(name, "/")
+	base := "/repos/" + url.PathEscape(owner) + "/" + url.PathEscape(repoName)
 
 	var meta struct {
 		FullName    string   `json:"full_name"`
@@ -191,6 +202,9 @@ func (c *Client) FetchRepo(ctx context.Context, name string) (*Repo, error) {
 	}
 	if meta.FullName == "" || meta.PushedAt == "" {
 		return nil, fmt.Errorf("GET %s: response lacks full_name or pushed_at", base)
+	}
+	if !strings.EqualFold(meta.FullName, name) {
+		return nil, fmt.Errorf("GET %s: the response is for %s: the repository was renamed or transferred, update github_repo in the cv data", base, meta.FullName)
 	}
 
 	var langs map[string]int64
@@ -306,8 +320,13 @@ func (c *Client) once(ctx context.Context, path string) (body []byte, wait time.
 
 	resp, err := c.httpClient().Do(req)
 	if err != nil {
+		msg := fmt.Errorf("GET %s: %s", path, scrub(err.Error(), c.Token))
+		if errors.Is(err, errRedirectRefused) {
+			// A refused redirect is refused again on a retry.
+			return nil, -1, msg
+		}
 		// A timeout or a refused connection can pass, so it retries.
-		return nil, 0, fmt.Errorf("GET %s: %s", path, scrub(err.Error(), c.Token))
+		return nil, 0, msg
 	}
 	defer func() { _ = resp.Body.Close() }()
 

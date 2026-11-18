@@ -77,8 +77,16 @@ func TestParseArtefactTable(t *testing.T) {
 			data: []byte(`{"schema_version":1,"language":"en","projects":[{"id":"p","github_repo":"repo","description":"d"}]}`),
 		},
 		{
-			name: "project path traversal", lang: "en", wantErr: "not owner/name",
+			name: "project path traversal", lang: "en", wantErr: "owner is not",
 			data: []byte(`{"schema_version":1,"language":"en","projects":[{"id":"p","github_repo":"../x/y","description":"d"}]}`),
+		},
+		{
+			name: "project dot dot as repository", lang: "en", wantErr: "repository name is not",
+			data: []byte(`{"schema_version":1,"language":"en","projects":[{"id":"p","github_repo":"owner/..","description":"d"}]}`),
+		},
+		{
+			name: "trailing data after the document", lang: "en", wantErr: "not valid JSON",
+			data: append(artefact("1", "en", ""), []byte(` {"x":1}`)...),
 		},
 		{
 			name: "duplicate project id", lang: "en", wantErr: "appears twice",
@@ -129,7 +137,7 @@ func TestNullableValidUntilSurvives(t *testing.T) {
 
 func TestLoadFromMissingDataset(t *testing.T) {
 	t.Parallel()
-	_, err := loadFrom(fstest.MapFS{"generated/.gitkeep": {}})
+	_, err := Load(fstest.MapFS{"generated/.gitkeep": {}})
 	if err == nil || !strings.Contains(err.Error(), "task content:build") {
 		t.Errorf("error %v", err)
 	}

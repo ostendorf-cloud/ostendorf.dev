@@ -1,6 +1,7 @@
 version: "3"
 
-# CV_RELEASE_TAG, the pinned cv release content:build reads.
+# CV_RELEASE_TAG and the two CV_RELEASE_SHA256_* digests, the pinned cv release
+# content:build reads and verifies.
 dotenv: [cv-release.env]
 
 tasks:
@@ -146,6 +147,9 @@ tasks:
     desc: Fetch the pinned cv release and the GitHub data, write the dataset the binary embeds
     sources:
       - cv-release.env
+      - go.mod
+      - cmd/content/*.go
+      - internal/content/*.go
     generates:
       - internal/content/generated/dataset.json
     cmds:

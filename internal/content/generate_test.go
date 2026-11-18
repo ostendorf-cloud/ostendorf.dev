@@ -29,6 +29,11 @@ func generate(t *testing.T, f *fakeGitHub, mutate func(*Options)) ([]byte, error
 	if mutate != nil {
 		mutate(&o)
 	}
+	if o.Digests == nil {
+		// The artefacts as the test left them are the pinned ones, so a test of
+		// a parse failure reaches the parser.
+		o.Digests = digestsOf(o.Artefacts)
+	}
 	return Generate(context.Background(), o)
 }
 
@@ -77,7 +82,7 @@ func TestGenerateOutputRoundTrips(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	ds, err := loadFrom(fstest.MapFS{"generated/" + DatasetFile: {Data: out}})
+	ds, err := Load(fstest.MapFS{"generated/" + DatasetFile: {Data: out}})
 	if err != nil {
 		t.Fatal(err)
 	}

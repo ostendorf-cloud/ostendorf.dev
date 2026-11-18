@@ -3,6 +3,8 @@ package content
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -93,6 +95,15 @@ func sampleArtefacts(t *testing.T) map[string][]byte {
 		t.Fatal(err)
 	}
 	return m
+}
+
+func digestsOf(artefacts map[string][]byte) map[string]string {
+	out := map[string]string{}
+	for lang, raw := range artefacts {
+		sum := sha256.Sum256(raw)
+		out[lang] = hex.EncodeToString(sum[:])
+	}
+	return out
 }
 
 func readFile(t *testing.T, parts ...string) []byte {

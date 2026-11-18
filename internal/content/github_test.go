@@ -220,11 +220,51 @@ func TestFetchRepoTimeoutRetriesThenFails(t *testing.T) {
 
 func TestFetchRepoRejectsBadName(t *testing.T) {
 	t.Parallel()
-	c, _, _ := newClient(t, &fakeGitHub{}, "")
-	for _, name := range []string{"", "example", "a/b/c", "../x/y", "a b/c", "a/b?x=1"} {
+	f := &fakeGitHub{}
+	c, _, _ := newClient(t, f, "")
+	for _, name := range []string{
+		"", "example", "a/b/c", "../x/y", "a b/c", "a/b?x=1",
+		"../users", "./x", "owner/..", "owner/.", "../..", "-a/b", "a-/b", "a--b/c", "a/b#f", "a/b%2e", `a\b/c`,
+	} {
 		if _, err := c.FetchRepo(context.Background(), name); err == nil {
 			t.Errorf("%q accepted", name)
 		}
+	}
+	if got := f.requested(); len(got) != 0 {
+		t.Errorf("a rejected name still caused requests: %v", got)
+	}
+}
+
+func TestFetchRepoRejectsAResponseForAnotherRepository(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		name, fullName string
+		wantErr        bool
+	}{
+		{"same name", "example/repo", false},
+		{"case differs", "Example/Repo", false},
+		{"transferred", "newowner/repo", true},
+		{"renamed", "example/renamed", true},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			f := &fakeGitHub{override: func(w http.ResponseWriter, r *http.Request) bool {
+				if r.URL.Path == "/repos/example/repo" {
+					fmt.Fprintf(w, `{"full_name":%q,"html_url":"u","private":false,"pushed_at":"2026-01-01T00:00:00Z"}`, tc.fullName)
+					return true
+				}
+				return false
+			}}
+			c, _, _ := newClient(t, f, "")
+			_, err := c.FetchRepo(context.Background(), "example/repo")
+			if tc.wantErr != (err != nil) {
+				t.Fatalf("error %v", err)
+			}
+			if err != nil && !strings.Contains(err.Error(), "renamed or transferred") {
+				t.Errorf("error %v", err)
+			}
+		})
 	}
 }
 
