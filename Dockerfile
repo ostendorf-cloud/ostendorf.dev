@@ -47,6 +47,14 @@ COPY internal/ internal/
 COPY --from=frontend /src/cmd/website/dist cmd/website/dist
 COPY --from=frontend /src/cmd/website/prerendered cmd/website/prerendered
 
+# The dataset is generated outside the image by "task content:build", which
+# needs the network and a token this build must never hold. It arrives with
+# "COPY internal/" above. No build argument, no secret and no token exists in
+# this file. Without the dataset the binary would compile and fail at start, so
+# refuse here.
+RUN test -s internal/content/generated/dataset.json \
+    || { echo "internal/content/generated/dataset.json is missing: run task content:build first" >&2; exit 1; }
+
 RUN CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/website ./cmd/website
 
 # distroless/static-debian12 carries only a minimal root filesystem,

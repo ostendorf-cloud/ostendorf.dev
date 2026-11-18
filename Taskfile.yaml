@@ -1,5 +1,9 @@
 version: "3"
 
+# CV_RELEASE_TAG and the two CV_RELEASE_SHA256_* digests, the pinned cv release
+# content:build reads and verifies.
+dotenv: [cv-release.env]
+
 tasks:
   setup:
     desc: Install the pinned toolchain
@@ -133,12 +137,33 @@ tasks:
     cmds:
       - helm unittest charts/ostendorf.dev
 
+  # Build time only: the one place the cv release and the GitHub API are
+  # reached. GITHUB_TOKEN is read from the environment when set (CI sets it from
+  # secrets.GITHUB_TOKEN, read only) and is optional, since public data needs no
+  # scope. It is skipped while cv-release.env and the output are unchanged, so
+  # task build in CI, after a separate content step, does not call GitHub twice.
+  # Refresh the GitHub data of an unchanged pin with: task content:build --force
+  content:build:
+    desc: Fetch the pinned cv release and the GitHub data, write the dataset the binary embeds
+    sources:
+      - cv-release.env
+      - go.mod
+      - cmd/content/*.go
+      - internal/content/*.go
+    generates:
+      - internal/content/generated/dataset.json
+    cmds:
+      - go run ./cmd/content
+
   build:
     desc: Compile the website binary
-    deps: [web:build, prerender]
+    deps: [web:build, prerender, content:build]
     cmds:
       - go build -o bin/website ./cmd/website
 
+  # The content tests read their own checked in sample, so this target does not
+  # need content:build: internal/content/generated holds a .gitkeep, which is
+  # enough for go:embed.
   test:go:
     desc: Go test
     deps: [web:build, prerender]

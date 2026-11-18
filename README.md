@@ -25,6 +25,13 @@ task build        # compiles the website binary into bin/website
 bin/website
 ```
 
+`task build` also runs `task content:build`, which downloads the cv release pinned in
+`cv-release.env` and calls the GitHub API, so it needs the network and a set pin. Until the pin is
+set, it fails with "no cv release is pinned". `GITHUB_TOKEN` is optional locally. A binary needs
+the generated `internal/content/generated/dataset.json` and refuses to start without it. For
+`docker compose up --build`, run `task content:build` first: the image build refuses to run
+without the dataset and never holds a token.
+
 The server listens on `:8080` and answers `/healthz`, `/readyz` and `/metrics` on a second,
 administrative listener at `:8081`, never on the public one. Neither address is configurable
 yet: this service has no environment-driven configuration surface until a later milestone

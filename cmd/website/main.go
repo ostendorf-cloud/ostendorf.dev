@@ -15,6 +15,7 @@ import (
 	"github.com/ostendorf-cloud/govue/metrics"
 
 	"github.com/ostendorf-cloud/ostendorf.dev/internal/config"
+	"github.com/ostendorf-cloud/ostendorf.dev/internal/content"
 	"github.com/ostendorf-cloud/ostendorf.dev/internal/webapp"
 )
 
@@ -26,12 +27,30 @@ func main() {
 }
 
 func run() error {
+	return runWith(content.Embedded)
+}
+
+// runWith is run with the dataset loader passed in, so a test can start the
+// service without the generated file.
+func runWith(loadContent func() (content.Dataset, error)) error {
 	cfg, err := config.Load(os.Getenv)
 	if err != nil {
 		return err
 	}
 
 	logger := logging.New(os.Stdout, cfg.LogLevel)
+
+	// The dataset is compiled in, so this reads no file and makes no call. It
+	// fails only for a binary built without "task content:build", which the
+	// Dockerfile refuses to produce.
+	dataset, err := loadContent()
+	if err != nil {
+		return err
+	}
+	logger.Info("content loaded",
+		"cv_release", dataset.Source.CV.Release,
+		"github_fetched_at", dataset.Source.GitHub.FetchedAt,
+		"github_stale", dataset.Source.GitHub.Stale)
 
 	handler, err := buildHandler(cfg)
 	if err != nil {
