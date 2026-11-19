@@ -31,16 +31,23 @@ here is a change there. It follows govue's privacy checklist (`docs/concepts/gov
   dropped and counted in `analytics_views_dropped_total`. A failure is logged at warn level: the
   first of a class at once, then at most once a minute with the count since the last line.
 
-## What the owner still has to state
+## Operator facts
 
-These are not properties of the code and belong in the privacy text:
+These are not properties of the code. The owner stated them on 2026-11-19, and the privacy text
+says them as the operator's facts:
 
-- Who runs the Umami instance and where, and that no third party receives the data.
-- What Umami stores of the shortened address, how long it keeps the data and the legal basis.
+- The site and the Umami instance run on the owner's own hardware in Germany. There is no
+  hosting provider and no processor for hosting.
+- Access logs (application and ingress) are kept 30 days. Umami data is kept 14 months.
+- Umami derives country, region and city from the shortened address and browser and operating
+  system from the user agent. The full address and the full user agent are not stored.
+- Legal basis for logs and counting: Art. 6(1)(f) GDPR (secure and stable operation, anonymous
+  measurement of reach).
 
 ## Configuration
 
-Counting is off unless both variables are set. Setting only one stops the start.
+Counting is on in production, where both variables are set. It is off unless both are set, and
+setting only one stops the start.
 
 | Variable           | Meaning                                               | Secret |
 | ------------------ | ----------------------------------------------------- | ------ |

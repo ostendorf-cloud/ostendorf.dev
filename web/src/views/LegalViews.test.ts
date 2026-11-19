@@ -91,6 +91,36 @@ describe('legal pages', () => {
     }
   })
 
+  it('states own hardware and names no hosting provider, without the old hedging', async () => {
+    for (const [locale, own, gone] of [
+      [
+        'de',
+        'eigener Hardware',
+        ['Hetzner', 'wenn sie für die Website eingerichtet ist', 'kann Seitenaufrufe'],
+      ],
+      ['en', 'own hardware', ['Hetzner', 'when it is set up for the site', 'can count page views']],
+    ] as const) {
+      const { container, unmount } = await renderAt(`/${locale}/privacy`, locale)
+      const text = (container.textContent ?? '').replace(/\s+/g, ' ')
+      expect(text).toContain(own)
+      for (const phrase of gone) {
+        expect(text).not.toContain(phrase)
+      }
+      unmount()
+    }
+  })
+
+  it.each([
+    ['de', ['30 Tage','14 Monaten', 'Art. 6 Abs. 1 lit. f DSGVO']],
+    ['en', ['30 days','14 months', 'Art. 6(1)(f) GDPR']],
+  ] as const)('states retention and legal basis in %s', async (locale, needles) => {
+    const { container } = await renderAt(`/${locale}/privacy`, locale)
+    const text = (container.textContent ?? '').replace(/\s+/g, ' ')
+    for (const needle of needles) {
+      expect(text).toContain(needle)
+    }
+  })
+
   it('links the German version from the English pages', async () => {
     await renderAt('/en/privacy', 'en')
 
