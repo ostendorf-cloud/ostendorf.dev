@@ -31,6 +31,10 @@ type Route struct {
 	// File is the prerendered file that answers Slug, relative to
 	// cmd/website/prerendered.
 	File string `json:"file"`
+	// Exact serves the page at "/<slug>" without a trailing slash, the
+	// path govue's legal pages and its build check use ("/de/imprint").
+	// Every other route is served at "/<slug>/".
+	Exact bool `json:"exact,omitempty"`
 }
 
 // Load parses the embedded route table.

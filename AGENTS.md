@@ -27,6 +27,17 @@ application.
   the mux with its middleware directly: nothing that replaces the request may sit between the
   two, or the route pattern is lost and nothing is counted. `docs/analytics.md` states what is
   counted, and is the source for the privacy text.
+- The legal pages are the site's own text on govue's structure. `internal/webapp` mounts
+  `language.HandleLegal` (no terms: the site has none, so `/terms` and `/agb` stay 404), which
+  redirects `/imprint`, `/privacy` and the German aliases to `/de/...` or `/en/...`. The four
+  pages are `routes.json` entries with `"exact": true`, served at `/de/imprint` and so on without
+  a trailing slash, the path govue's footer links and `govue-check-legal` expect. Their text is
+  `web/src/views/ImprintView.vue` and `PrivacyView.vue`, both languages in one file, operator
+  facts in `web/src/legal/operator.ts`. `task prerender` ends with `govue-check-legal`, and
+  `web/scripts/prerender.ts` writes a build time `sitemap.xml` that `cmd/website`'s
+  `TestPrerenderedSitemapIsTheServedSitemap` proves equal to the served one. The imprint has no
+  dispute resolution section and the privacy text names no contact form, since there is none. The
+  home page stays English at `/`.
 - `internal/depsync` checks that `go.mod` and `web/package.json` pin the same govue version, and
   that `web/pnpm-lock.yaml` still resolves govue's Vue package to its `web/` subdirectory; see
   "govue's two halves move together" below.

@@ -7,6 +7,15 @@ export interface RouteEntry {
   name: string
   slug: string
   file: string
+  /** Served at "/<slug>" without a trailing slash, like govue's legal pages. */
+  exact?: boolean
+}
+
+/** routePath is the path a table entry is served at: "/" for the home
+ *  page, "/<slug>" for an exact entry and "/<slug>/" for every other. */
+export function routePath(entry: Pick<RouteEntry, 'slug' | 'exact'>): string {
+  if (entry.slug === '') return '/'
+  return entry.exact ? `/${entry.slug}` : `/${entry.slug}/`
 }
 
 /**

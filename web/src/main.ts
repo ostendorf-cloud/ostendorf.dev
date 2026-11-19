@@ -3,6 +3,7 @@ import { createWebHistory } from 'vue-router'
 import { useTheme } from '@ostendorf-cloud/govue'
 
 import App from './App.vue'
+import { createSiteI18n, followRoute, localeOfPath } from './lib/language'
 import { THEME_NAME } from './lib/theme'
 import { createAppRouter } from './router'
 import './styles.css'
@@ -14,5 +15,9 @@ import './styles.css'
 useTheme({ theme: THEME_NAME })
 
 const app = createApp(App)
-app.use(createAppRouter(createWebHistory()))
+const i18n = createSiteI18n(localeOfPath(window.location.pathname))
+const router = createAppRouter(createWebHistory())
+followRoute(router, i18n)
+app.use(i18n)
+app.use(router)
 app.mount('#app')

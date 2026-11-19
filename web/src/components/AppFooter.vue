@@ -10,5 +10,7 @@ const note = computed(() => `© ${new Date().getFullYear()} Simon Ostendorf`)
 </script>
 
 <template>
-  <GovueFooter :note="note" />
+  <!-- The imprint and the privacy page, in the active language: govue's
+       build check (govue-check-legal) fails a prerendered page without them. -->
+  <GovueFooter :legal="['imprint', 'privacy']" :note="note" />
 </template>

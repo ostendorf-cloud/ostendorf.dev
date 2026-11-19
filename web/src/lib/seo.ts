@@ -1,4 +1,4 @@
-import { routeTable } from './routeTable'
+import { routePath, routeTable } from './routeTable'
 
 /** The site's canonical origin. Overridable through VITE_SITE_URL for a
  *  staging build; the default matches the Go service's own default
@@ -20,20 +20,19 @@ export const NOT_FOUND = 'notFound' as const
  *  descriptions below, in both directions. */
 export type PageRoute = string
 
-/** slugs maps a route to its path segment, derived from routeTable so a
- *  page added there needs no edit here. The 404 page has no segment of
- *  its own, the same empty value the home page's own slug happens to
- *  share. */
-const slugs: Record<string, string> = Object.fromEntries(
-  routeTable.map((entry): [string, string] => [entry.name, entry.slug]),
+/** paths maps a route to its served path, derived from routeTable so a
+ *  page added there needs no edit here. The 404 page has no path of
+ *  its own, the same value the home page's own path happens to share. */
+const paths: Record<string, string> = Object.fromEntries(
+  routeTable.map((entry): [string, string] => [entry.name, routePath(entry)]),
 )
-slugs[NOT_FOUND] = ''
+paths[NOT_FOUND] = '/'
 
-/** path is the absolute path of route, always starting and ending with
- *  a slash. */
+/** path is the absolute path of route: it starts with a slash and ends
+ *  with one, except for an exact route (the legal pages), which is
+ *  served without it. */
 export function path(route: PageRoute): string {
-  const slug = slugs[route]
-  return slug === '' ? '/' : `/${slug}/`
+  return paths[route]
 }
 
 /** canonical is the absolute URL of route. */
@@ -55,11 +54,19 @@ export interface PageMeta {
  *  exactly routeTable's names plus NOT_FOUND. */
 export const titles: Record<string, string> = {
   home: 'Simon Ostendorf',
+  'imprint-de': 'Impressum',
+  'imprint-en': 'Imprint',
+  'privacy-de': 'Datenschutzerklärung',
+  'privacy-en': 'Privacy policy',
   notFound: 'Page not found',
 }
 
 export const descriptions: Record<string, string> = {
   home: 'Simon Ostendorf — DevOps & Cloud Engineer. Projects, skills and contact.',
+  'imprint-de': 'Impressum und Anbieterkennzeichnung von ostendorf.dev.',
+  'imprint-en': 'Imprint and provider details of ostendorf.dev.',
+  'privacy-de': 'Datenschutzerklärung von ostendorf.dev.',
+  'privacy-en': 'Privacy policy of ostendorf.dev.',
   notFound: 'The page you were looking for does not exist.',
 }
 

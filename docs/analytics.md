@@ -6,9 +6,9 @@ keeps the no-third-party-request property the site inherited from old_ostendorf.
 
 ## What is counted
 
-The statement below is the source for the privacy text. The privacy text itself belongs to the
-legal pages work and is not written here. It follows govue's privacy checklist
-(`docs/concepts/govue.md`, section "Analytics").
+The statement below is the source for the privacy text, `web/src/views/PrivacyView.vue`. A change
+here is a change there. It follows govue's privacy checklist (`docs/concepts/govue.md`, section
+"Analytics").
 
 - A page view is counted on the server after the page was served. No script runs, no cookie is
   set and nothing is stored on the visitor's device.
@@ -21,8 +21,8 @@ legal pages work and is not written here. It follows govue's privacy checklist
 - What is sent to Umami: the route pattern, the referring site as an origin only (no path), the
   first language tag of the browser, the browser's user agent and the visitor's IP address.
 - The IP address is shortened before it is sent: to its first three bytes for IPv4 and its first
-  six bytes for IPv6. Umami derives country and usually region from it. The site never sets
-  `FullIP`.
+  six bytes for IPv6. Umami derives the country, region and city from it. The shortening makes
+  the city less accurate. The site never sets `FullIP`.
 - A visitor who sends Do Not Track (`DNT: 1`) or Global Privacy Control (`Sec-GPC: 1`) is not
   counted at all.
 - Prefetch requests, requests a browser marks as not a page navigation, bots, empty user agents

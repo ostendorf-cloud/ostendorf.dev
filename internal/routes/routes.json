@@ -1,1 +1,7 @@
-[{ "name": "home", "slug": "", "file": "index.html" }]
+[
+  { "name": "home", "slug": "", "file": "index.html" },
+  { "name": "imprint-de", "slug": "de/imprint", "file": "de/imprint/index.html", "exact": true },
+  { "name": "imprint-en", "slug": "en/imprint", "file": "en/imprint/index.html", "exact": true },
+  { "name": "privacy-de", "slug": "de/privacy", "file": "de/privacy/index.html", "exact": true },
+  { "name": "privacy-en", "slug": "en/privacy", "file": "en/privacy/index.html", "exact": true }
+]
