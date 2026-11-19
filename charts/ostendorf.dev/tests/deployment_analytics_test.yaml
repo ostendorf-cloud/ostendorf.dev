@@ -1,0 +1,64 @@
+suite: deployment page view counting configuration
+templates:
+  - templates/deployment.yaml
+tests:
+  - it: renders no environment at all by default, so counting is off
+    asserts:
+      - isNull:
+          path: spec.template.spec.containers[0].env
+
+  - it: renders both Umami variables as plain values when both are set
+    set:
+      config:
+        umami:
+          url: https://umami.example.test
+          websiteId: 0a1b2c3d-0000-4000-8000-000000000001
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: UMAMI_URL
+            value: https://umami.example.test
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: UMAMI_WEBSITE_ID
+            value: 0a1b2c3d-0000-4000-8000-000000000001
+
+  - it: renders the trusted proxy list when set
+    set:
+      config:
+        trustedProxyCidrs: 10.0.0.0/8,192.168.1.10
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].env[0].name
+          value: TRUSTED_PROXIES
+      - equal:
+          path: spec.template.spec.containers[0].env[0].value
+          value: 10.0.0.0/8,192.168.1.10
+
+  - it: never takes the website id from a secret, since it is not one
+    set:
+      config:
+        umami:
+          url: https://umami.example.test
+          websiteId: 0a1b2c3d-0000-4000-8000-000000000001
+    asserts:
+      - notExists:
+          path: spec.template.spec.containers[0].env[1].valueFrom
+
+  - it: rejects a Umami URL that carries credentials
+    set:
+      config:
+        umami:
+          url: https://user:pass@umami.example.test
+    asserts:
+      - failedTemplate: {}
+
+  - it: rejects a website id that is no UUID
+    set:
+      config:
+        umami:
+          websiteId: not-a-uuid
+    asserts:
+      - failedTemplate: {}

@@ -98,6 +98,9 @@ See `values.yaml` for the full, commented list. The ones most deployments touch:
 | `httpRoute.parentRefs.name` | Name of the `Gateway` to attach to. Required when `httpRoute.enabled` is true | `""` |
 | `httpRoute.parentRefs.namespace` | Namespace the `Gateway` lives in. Required when `httpRoute.enabled` is true; see "External routing" above for why this has no same-namespace fallback | `""` |
 | `httpRoute.parentRefs.sectionName` | Specific listener on the `Gateway` to attach to, when it exposes more than one | `""` |
+| `config.umami.url` | `UMAMI_URL`: base URL of the Umami instance. Not a secret. Page views are counted only when this and `config.umami.websiteId` are both set; one alone fails the start. See `docs/analytics.md` in the repository. | `""` |
+| `config.umami.websiteId` | `UMAMI_WEBSITE_ID`: UUID of the website in Umami. Not a secret. | `""` |
+| `config.trustedProxyCidrs` | `TRUSTED_PROXIES`: CIDRs of the `Ingress` controller or `Gateway` in front. Without it every request comes from the proxy and nothing is counted. | `""` |
 | `resources` | Pod resource requests/limits | see `values.yaml` |
 
 ## Upgrading

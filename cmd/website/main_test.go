@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/ostendorf-cloud/govue/health"
+	"github.com/ostendorf-cloud/govue/metrics"
 
 	"github.com/ostendorf-cloud/ostendorf.dev/internal/config"
 )
@@ -26,7 +27,7 @@ func TestEmbeddedDistBuildsAWorkingHandler(t *testing.T) {
 		t.Fatalf("fs.Sub(distFS, \"dist\") error = %v", err)
 	}
 
-	if _, err := buildHandler(testCfg()); err != nil {
+	if _, err := buildHandler(testCfg(), nil); err != nil {
 		t.Fatalf("buildHandler() error = %v", err)
 	}
 
@@ -55,7 +56,7 @@ func TestBuildAdminHandlerServesHealthReadinessAndMetrics(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			handler := buildAdminHandler(health.New())
+			handler := buildAdminHandler(health.New(), metrics.Handler(metrics.NewRegistry()))
 
 			rec := httptest.NewRecorder()
 			req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, tc.path, nil)

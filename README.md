@@ -32,8 +32,12 @@ needs one.
 
 ## Configuration
 
-This service reads no environment variables yet. `.env.example` documents that and stays ready
-for the first variable a later milestone adds.
+`.env.example` lists every variable. All are optional, and none is a secret.
+
+- `UMAMI_URL` and `UMAMI_WEBSITE_ID` turn on server side page view counting. Both or neither.
+- `TRUSTED_PROXIES` names the proxies in front of the service, so the client address is known.
+
+What is counted, and what is not, is in `docs/analytics.md`.
 
 ## Container
 
