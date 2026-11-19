@@ -8,8 +8,8 @@ import { THEME_NAME } from './lib/theme'
 import { createAppRouter } from './router'
 import './styles.css'
 
-// The theme never varies: this site ships exactly one brand, still a
-// neutral placeholder (see src/theme/ostendorf-dev.css). Mode starts at
+// The theme never varies: this site ships exactly one brand,
+// generated from src/theme/seeds.json into src/theme/ostendorf-dev.css. Mode starts at
 // "system", the visitor's own choice only overrides it once the header's
 // theme toggle changes it, matching useTheme's own documented default.
 useTheme({ theme: THEME_NAME })
