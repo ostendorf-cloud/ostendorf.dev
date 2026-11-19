@@ -63,7 +63,7 @@ func runApp(ctx context.Context, cfg config.Config, logger *slog.Logger, serve s
 	}
 	logViewsStatus(logger, cfg, views)
 
-	handler, err := buildHandler(cfg, views)
+	handler, err := buildHandler(cfg, logger, views)
 	if err != nil {
 		_ = views.Close(context.Background())
 		return err
@@ -105,7 +105,7 @@ func buildViews(cfg config.Config, logger *slog.Logger, httpClient *http.Client,
 		Hostname:   cfg.SiteURL.Hostname(),
 		Logger:     logger,
 		HTTPClient: httpClient,
-		ClientIP:   clientip.NewResolver(cfg.TrustedProxies),
+		ClientIP:   newResolver(cfg),
 		OnDrop:     onDrop,
 	})
 }
@@ -121,12 +121,19 @@ func logViewsStatus(logger *slog.Logger, cfg config.Config, views *analytics.Cli
 	}
 }
 
+// newResolver is the one client address resolver behind TRUSTED_PROXIES. The
+// page view counter and the access log both use it.
+func newResolver(cfg config.Config) *clientip.Resolver {
+	return clientip.NewResolver(cfg.TrustedProxies)
+}
+
 // buildHandler serves the embedded SPA bundle's assets and the
 // prerendered HTML per route, through internal/webapp, with views counting
-// the pages. A real application adding a session, a form or a rate limiter
-// wires govue's own middleware pieces in here too, but never between the
-// mux and views, which reads the route pattern the mux sets; see AGENTS.md.
-func buildHandler(cfg config.Config, views *analytics.Client) (http.Handler, error) {
+// the pages and logger receiving the access log. A real application adding
+// a session, a form or a rate limiter wires govue's own middleware pieces
+// in here too, but never between the mux and views, which reads the route
+// pattern the mux sets; see AGENTS.md.
+func buildHandler(cfg config.Config, logger *slog.Logger, views *analytics.Client) (http.Handler, error) {
 	dist, err := fs.Sub(distFS, "dist")
 	if err != nil {
 		return nil, fmt.Errorf("website: %w", err)
@@ -136,7 +143,12 @@ func buildHandler(cfg config.Config, views *analytics.Client) (http.Handler, err
 		return nil, fmt.Errorf("website: %w", err)
 	}
 
-	return webapp.NewHandler(webapp.Config{SiteURL: cfg.SiteURL, Views: views}, dist, prerendered)
+	return webapp.NewHandler(webapp.Config{
+		SiteURL:  cfg.SiteURL,
+		Views:    views,
+		Logger:   logger,
+		ClientIP: newResolver(cfg),
+	}, dist, prerendered)
 }
 
 // buildAdminHandler serves govue's admin listener: liveness, readiness and

@@ -2,6 +2,7 @@ package main
 
 import (
 	"io/fs"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -27,7 +28,7 @@ func TestEmbeddedDistBuildsAWorkingHandler(t *testing.T) {
 		t.Fatalf("fs.Sub(distFS, \"dist\") error = %v", err)
 	}
 
-	if _, err := buildHandler(testCfg(), nil); err != nil {
+	if _, err := buildHandler(testCfg(), slog.New(slog.DiscardHandler), nil); err != nil {
 		t.Fatalf("buildHandler() error = %v", err)
 	}
 

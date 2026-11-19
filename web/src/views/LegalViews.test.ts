@@ -111,13 +111,113 @@ describe('legal pages', () => {
   })
 
   it.each([
-    ['de', ['30 Tage', '14 Monaten', 'Art. 6 Abs. 1 lit. f DSGVO']],
-    ['en', ['30 days', '14 months', 'Art. 6(1)(f) GDPR']],
+    ['de', ['nach 30 Tagen', 'nach 14 Monaten', 'Art. 6 Abs. 1 lit. f DSGVO']],
+    ['en', ['after 30 days', 'after 14 months', 'Art. 6(1)(f) GDPR']],
   ] as const)('states retention and legal basis in %s', async (locale, needles) => {
     const { container } = await renderAt(`/${locale}/privacy`, locale)
     const text = (container.textContent ?? '').replace(/\s+/g, ' ')
     for (const needle of needles) {
       expect(text).toContain(needle)
+    }
+  })
+
+  it.each([
+    [
+      'de',
+      [
+        'Unser berechtigtes Interesse ist der sichere Betrieb der Website, die Analyse von Fehlern und die Abwehr von Missbrauch.',
+        'Unser berechtigtes Interesse ist, zu verstehen, wie die Website genutzt wird.',
+      ],
+      'Wir haben dieses Interesse gegen Ihre Rechte abgewogen und halten die Daten gering.',
+    ],
+    [
+      'en',
+      [
+        'Our legitimate interest is the secure operation of the site, the analysis of errors and the defence against abuse.',
+        'Our legitimate interest is to understand how the site is used.',
+      ],
+      'We weighed this interest against your rights and keep the data minimal.',
+    ],
+  ] as const)(
+    'states one interest per purpose and the weighing in %s',
+    async (locale, purposes, weighing) => {
+      const { container } = await renderAt(`/${locale}/privacy`, locale)
+      const text = (container.textContent ?? '').replace(/\s+/g, ' ')
+      for (const purpose of purposes) {
+        expect(text).toContain(purpose)
+      }
+      expect(text.split(weighing)).toHaveLength(3)
+    },
+  )
+
+  it.each([
+    ['de', 'eigener Hardware in Deutschland', ['zu Hause', 'Hetzner', 'anonyme']],
+    ['en', 'own hardware in Germany', ['at home', 'Hetzner', 'anonymous']],
+  ] as const)('states the location as %s and nothing else', async (locale, own, gone) => {
+    const { container } = await renderAt(`/${locale}/privacy`, locale)
+    const text = (container.textContent ?? '').replace(/\s+/g, ' ')
+    expect(text).toContain(own)
+    for (const phrase of gone) {
+      expect(text).not.toContain(phrase)
+    }
+  })
+
+  it.each([
+    [
+      'de',
+      [
+        'Protokoll der Anwendung',
+        'Routenmuster',
+        'User-Agent und die verweisende Adresse (Referrer) stehen nicht im Protokoll der Anwendung',
+        'Protokoll des vorgeschalteten Ingress',
+        'Anfragezeile',
+        'Beide Protokolle werden nach 30 Tagen gelöscht',
+      ],
+    ],
+    [
+      'en',
+      [
+        'log of the application',
+        'route pattern',
+        'user agent and the referring address (referrer) are not in the application log',
+        'log of the ingress',
+        'request line',
+        'Both logs are deleted after 30 days',
+      ],
+    ],
+  ] as const)(
+    'states the application log and the ingress log apart in %s',
+    async (locale, needles) => {
+      const { container } = await renderAt(`/${locale}/privacy`, locale)
+      const text = (container.textContent ?? '').replace(/\s+/g, ' ')
+      for (const needle of needles) {
+        expect(text).toContain(needle)
+      }
+    },
+  )
+
+  it.each([
+    ['de', 'Protokoll, Domain und gegebenenfalls Port', 'pseudonyme Kennung', 'Art. 21 DSGVO'],
+    ['en', 'protocol, domain and, where present, port', 'pseudonymous identifier', 'Art. 21 GDPR'],
+  ] as const)(
+    'states the referrer port, the pseudonym and the objection in %s',
+    async (locale, ...needles) => {
+      const { container } = await renderAt(`/${locale}/privacy`, locale)
+      const text = (container.textContent ?? '').replace(/\s+/g, ' ')
+      for (const needle of needles) {
+        expect(text).toContain(needle)
+      }
+    },
+  )
+
+  it.each([
+    ['de', 'Wenn Sie mir', 'erhalte ich'],
+    ['en', 'write me', 'I receive'],
+  ] as const)('speaks in one voice in %s', async (locale, ...gone) => {
+    const { container } = await renderAt(`/${locale}/privacy`, locale)
+    const text = (container.textContent ?? '').replace(/\s+/g, ' ')
+    for (const phrase of gone) {
+      expect(text).not.toContain(phrase)
     }
   })
 
