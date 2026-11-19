@@ -103,6 +103,14 @@ See `values.yaml` for the full, commented list. The ones most deployments touch:
 | `config.trustedProxyCidrs` | `TRUSTED_PROXIES`: CIDRs of the `Ingress` controller or `Gateway` in front. Without it every request comes from the proxy and nothing is counted. | `""` |
 | `resources` | Pod resource requests/limits | see `values.yaml` |
 
+### Page view counting notes
+
+- The chart does not expose `UMAMI_TIMEOUT` and `UMAMI_QUEUE_SIZE` (defaults 5s and 256). They
+  are listed in the repository's `.env.example` only.
+- `values.schema.json` accepts `http://` or `https://` for `config.umami.url` and does not
+  restrict the host. The application is stricter and refuses to start with plain `http` unless
+  the host is `localhost`, a loopback address or a name inside the cluster. Use `https` otherwise.
+
 ## Upgrading
 
 No breaking change has shipped yet; `Chart.yaml`'s `version` tracks that going forward.

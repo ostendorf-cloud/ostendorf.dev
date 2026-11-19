@@ -38,17 +38,30 @@ func run() error {
 
 	logger := logging.New(os.Stdout, cfg.LogLevel)
 
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+
+	return runApp(ctx, cfg, logger, httpserver.RunAdmin, nil)
+}
+
+// serveFunc is the shape of httpserver.RunAdmin, so a test can stand in for
+// the two listeners and still go through runApp's startup and shutdown.
+type serveFunc func(context.Context, httpserver.Config, httpserver.AdminConfig) error
+
+// runApp builds the page view counter and the handlers, serves them and,
+// once serve returns, sends the page views still queued. umamiHTTP is the
+// client that posts to Umami: nil means govue's default, a test passes a
+// fake transport.
+func runApp(ctx context.Context, cfg config.Config, logger *slog.Logger, serve serveFunc, umamiHTTP *http.Client) error {
 	// One Prometheus registry serves the scrape and holds the dropped view
 	// counter, so a lost view shows up in /metrics.
 	promRegistry := metrics.NewRegistry()
-	views, err := buildViews(cfg, logger, metrics.NewCounter(promRegistry, "analytics_views_dropped_total",
+	views, err := buildViews(cfg, logger, umamiHTTP, metrics.NewCounter(promRegistry, "analytics_views_dropped_total",
 		"Page views lost to a full queue or a shutdown before they reached Umami."))
 	if err != nil {
 		return err
 	}
-	// govue logs nothing when counting is off, so this line is the one
-	// startup statement of whether page views are counted.
-	logger.Info("page view counting", "enabled", views.Enabled())
+	logViewsStatus(logger, cfg, views)
 
 	handler, err := buildHandler(cfg, views)
 	if err != nil {
@@ -58,10 +71,7 @@ func run() error {
 
 	registry := health.New()
 
-	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
-	defer stop()
-
-	runErr := httpserver.RunAdmin(ctx, httpserver.Config{
+	runErr := serve(ctx, httpserver.Config{
 		Addr:    cfg.Addr,
 		Handler: handler,
 		Logger:  logger,
@@ -86,15 +96,29 @@ const viewsCloseTimeout = 5 * time.Second
 
 // buildViews builds the server side page view counter. It counts nothing
 // unless both UMAMI_URL and UMAMI_WEBSITE_ID are set. The client address
-// comes from the trusted proxy list a deployment behind a proxy needs.
-// onDrop is called for every view that is lost and must not block.
-func buildViews(cfg config.Config, logger *slog.Logger, onDrop func()) (*analytics.Client, error) {
+// comes from the trusted proxy list a deployment behind a proxy needs. The
+// whole address is never sent: FullIP stays off. httpClient posts to Umami,
+// nil is govue's default. onDrop is called for every view that is lost and
+// must not block.
+func buildViews(cfg config.Config, logger *slog.Logger, httpClient *http.Client, onDrop func()) (*analytics.Client, error) {
 	return analytics.New(cfg.Umami, analytics.Options{
-		Hostname: cfg.SiteURL.Hostname(),
-		Logger:   logger,
-		ClientIP: clientip.NewResolver(cfg.TrustedProxies),
-		OnDrop:   onDrop,
+		Hostname:   cfg.SiteURL.Hostname(),
+		Logger:     logger,
+		HTTPClient: httpClient,
+		ClientIP:   clientip.NewResolver(cfg.TrustedProxies),
+		OnDrop:     onDrop,
 	})
+}
+
+// logViewsStatus says once at startup whether page views are counted: govue
+// logs nothing when counting is off. Counting on with no trusted proxy is a
+// warning, because behind an ingress every request then comes from the
+// proxy's private address and nothing is counted, silently.
+func logViewsStatus(logger *slog.Logger, cfg config.Config, views *analytics.Client) {
+	logger.Info("page view counting", "enabled", views.Enabled())
+	if views.Enabled() && len(cfg.TrustedProxies) == 0 {
+		logger.Warn("page view counting is on but TRUSTED_PROXIES is empty: behind a proxy no view is counted")
+	}
 }
 
 // buildHandler serves the embedded SPA bundle's assets and the

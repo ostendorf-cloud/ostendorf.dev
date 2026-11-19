@@ -26,9 +26,8 @@ bin/website
 ```
 
 The server listens on `:8080` and answers `/healthz`, `/readyz` and `/metrics` on a second,
-administrative listener at `:8081`, never on the public one. Neither address is configurable
-yet: this service has no environment-driven configuration surface until a later milestone
-needs one.
+administrative listener at `:8081`, never on the public one. Both addresses are configurable
+through `ADDR` and `ADMIN_ADDR`; see "Configuration" below.
 
 ## Configuration
 

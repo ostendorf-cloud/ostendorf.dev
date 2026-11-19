@@ -11,6 +11,7 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"testing/fstest"
 	"time"
 
 	"github.com/ostendorf-cloud/govue/analytics"
@@ -120,11 +121,24 @@ func TestHandlerCountsOnlyPagesAndReportsThePatternNotThePath(t *testing.T) {
 	fake := &fakeUmami{}
 	views := newViews(t, fake)
 	dist, prerendered := fakeBuild()
+	dist["assets/sub/nested.js"] = &fstest.MapFile{Data: []byte("console.log('nested')")}
 	cfg := testConfig()
 	cfg.Views = views
 	h, err := NewHandler(cfg, dist, prerendered)
 	if err != nil {
 		t.Fatalf("NewHandler() error = %v", err)
+	}
+
+	// A directory is no page: no listing is served, so none is counted.
+	for _, dir := range []string{"/assets/", "/assets/sub/", "/assets/sub"} {
+		rec := visit(t, h, http.MethodGet, dir, nil)
+		if strings.Contains(rec.Header().Get("Content-Type"), "text/html") && rec.Code == http.StatusOK {
+			t.Errorf("GET %s answered a 200 HTML page, want no directory listing", dir)
+		}
+	}
+	// A nested file is still served.
+	if rec := visit(t, h, http.MethodGet, "/assets/sub/nested.js", nil); rec.Code != http.StatusOK {
+		t.Errorf("GET /assets/sub/nested.js = %d, want %d", rec.Code, http.StatusOK)
 	}
 
 	// Counted: the home page, once, with a query string and a token in it.

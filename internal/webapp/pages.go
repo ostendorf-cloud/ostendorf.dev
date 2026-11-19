@@ -109,10 +109,20 @@ func newPageServer(dist, prerendered fs.FS) (*pageServer, error) {
 // stale.
 func (p *pageServer) assetHandler() http.Handler {
 	fileServer := http.FileServerFS(p.assets)
-	return http.StripPrefix("/assets/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	files := http.StripPrefix("/assets/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
 		fileServer.ServeHTTP(w, r)
 	}))
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// A path ending in a slash names a directory, which http.FileServerFS
+		// would answer with a 200 HTML listing: no listing is served, and
+		// page view counting must never mistake one for a page.
+		if strings.HasSuffix(r.URL.Path, "/") {
+			http.NotFound(w, r)
+			return
+		}
+		files.ServeHTTP(w, r)
+	})
 }
 
 // routeHandler answers one known route slug, registered once at startup
