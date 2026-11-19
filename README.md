@@ -26,14 +26,17 @@ bin/website
 ```
 
 The server listens on `:8080` and answers `/healthz`, `/readyz` and `/metrics` on a second,
-administrative listener at `:8081`, never on the public one. Neither address is configurable
-yet: this service has no environment-driven configuration surface until a later milestone
-needs one.
+administrative listener at `:8081`, never on the public one. Both addresses are configurable
+through `ADDR` and `ADMIN_ADDR`; see "Configuration" below.
 
 ## Configuration
 
-This service reads no environment variables yet. `.env.example` documents that and stays ready
-for the first variable a later milestone adds.
+`.env.example` lists every variable. All are optional, and none is a secret.
+
+- `UMAMI_URL` and `UMAMI_WEBSITE_ID` turn on server side page view counting. Both or neither.
+- `TRUSTED_PROXIES` names the proxies in front of the service, so the client address is known.
+
+What is counted, and what is not, is in `docs/analytics.md`.
 
 ## Container
 

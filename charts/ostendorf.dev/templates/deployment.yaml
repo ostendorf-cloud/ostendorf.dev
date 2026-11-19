@@ -61,6 +61,23 @@ spec:
             - name: admin
               containerPort: {{ .Values.service.adminPort }}
               protocol: TCP
+          {{- with .Values.config }}
+          {{- if or .trustedProxyCidrs .umami.url .umami.websiteId }}
+          env:
+            {{- if .trustedProxyCidrs }}
+            - name: TRUSTED_PROXIES
+              value: {{ .trustedProxyCidrs | quote }}
+            {{- end }}
+            {{- if .umami.url }}
+            - name: UMAMI_URL
+              value: {{ .umami.url | quote }}
+            {{- end }}
+            {{- if .umami.websiteId }}
+            - name: UMAMI_WEBSITE_ID
+              value: {{ .umami.websiteId | quote }}
+            {{- end }}
+          {{- end }}
+          {{- end }}
           {{- if .Values.startupProbe.enabled }}
           startupProbe:
             httpGet:

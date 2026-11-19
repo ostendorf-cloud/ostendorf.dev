@@ -21,6 +21,12 @@ application.
   one error. `SiteURL` (`SITE_URL`, default `https://ostendorf.dev`) is the base
   `internal/webapp`'s `robots.txt` and `sitemap.xml` build every URL from. There is no
   secret-shaped variable yet: no session, no OIDC, no CSRF and no form exist in this milestone.
+- Page views are counted on the server by govue's `analytics` package, adopted as is. Config
+  (`UMAMI_URL`, `UMAMI_WEBSITE_ID`, `TRUSTED_PROXIES`) lives in `internal/config`, the client is
+  built in `cmd/website/main.go` and closed on shutdown, and `internal/webapp.NewHandler` wraps
+  the mux with its middleware directly: nothing that replaces the request may sit between the
+  two, or the route pattern is lost and nothing is counted. `docs/analytics.md` states what is
+  counted, and is the source for the privacy text.
 - `internal/depsync` checks that `go.mod` and `web/package.json` pin the same govue version, and
   that `web/pnpm-lock.yaml` still resolves govue's Vue package to its `web/` subdirectory; see
   "govue's two halves move together" below.

@@ -108,6 +108,24 @@ httpRoute:
     # listeners.
     sectionName: ""
 
+# Application settings, rendered as environment variables only when set, so an
+# install with none of them works.
+config:
+  # TRUSTED_PROXIES: comma separated CIDRs of the proxies in front of this
+  # service, whose X-Forwarded-For header is believed. Behind an Ingress or a
+  # Gateway set this to the proxy's address range, or page view counting sees
+  # only the proxy and counts nothing. Empty trusts no header.
+  trustedProxyCidrs: ""
+  # Server side page view counting through Umami. Neither value is a secret:
+  # the URL carries no credentials and the website id is a public identifier.
+  # Counting is off unless both are set; setting only one fails the start.
+  umami:
+    # UMAMI_URL: base URL of the Umami instance, https (or plain http only for
+    # a name inside the cluster).
+    url: ""
+    # UMAMI_WEBSITE_ID: the website's UUID in Umami.
+    websiteId: ""
+
 resources:
   requests:
     cpu: 50m

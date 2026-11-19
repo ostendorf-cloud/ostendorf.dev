@@ -73,6 +73,31 @@
         }
       }
     },
+    "config": {
+      "type": "object",
+      "properties": {
+        "trustedProxyCidrs": {
+          "type": "string",
+          "description": "Comma separated CIDRs of the proxies in front of the service (TRUSTED_PROXIES). Empty trusts no X-Forwarded-For header."
+        },
+        "umami": {
+          "type": "object",
+          "description": "Server side page view counting. Off unless both values are set; neither is a secret.",
+          "properties": {
+            "url": {
+              "type": "string",
+              "pattern": "^(https?://[^/?#@\\s]+(/[^?#\\s]*)?)?$",
+              "description": "Base URL of the Umami instance (UMAMI_URL), no credentials, query or fragment."
+            },
+            "websiteId": {
+              "type": "string",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})?$",
+              "description": "UUID of the website in Umami (UMAMI_WEBSITE_ID)."
+            }
+          }
+        }
+      }
+    },
     "resources": { "type": "object" },
     "startupProbe": { "type": "object" },
     "livenessProbe": { "type": "object" },

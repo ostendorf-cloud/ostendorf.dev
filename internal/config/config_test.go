@@ -111,6 +111,56 @@ func TestLoadRejectsAnInvalidLogLevel(t *testing.T) {
 	}
 }
 
+const (
+	testUmamiURL = "https://umami.example.test"
+	testUmamiID  = "0a1b2c3d-0000-4000-8000-000000000001"
+)
+
+func TestLoadCountsNothingWithoutUmamiAndRejectsAHalfSetPair(t *testing.T) {
+	t.Parallel()
+
+	cfg, err := Load(env(nil))
+	if err != nil {
+		t.Fatalf("Load() error = %v, want nil", err)
+	}
+	if cfg.Umami.Enabled() {
+		t.Error("Umami is enabled with no UMAMI_URL and no UMAMI_WEBSITE_ID")
+	}
+
+	cfg, err = Load(env(map[string]string{"UMAMI_URL": testUmamiURL, "UMAMI_WEBSITE_ID": testUmamiID}))
+	if err != nil {
+		t.Fatalf("Load() error = %v, want nil", err)
+	}
+	if !cfg.Umami.Enabled() || cfg.Umami.URL != testUmamiURL || cfg.Umami.WebsiteID != testUmamiID {
+		t.Errorf("Umami = %+v, want both values carried", cfg.Umami)
+	}
+
+	for name, values := range map[string]map[string]string{
+		"url only": {"UMAMI_URL": testUmamiURL},
+		"id only":  {"UMAMI_WEBSITE_ID": testUmamiID},
+	} {
+		_, err := Load(env(values))
+		if err == nil || !strings.Contains(err.Error(), "UMAMI_URL and UMAMI_WEBSITE_ID") {
+			t.Errorf("%s: Load() error = %v, want the half set pair named", name, err)
+		}
+	}
+}
+
+func TestLoadReadsTrustedProxiesAndRejectsAMalformedOne(t *testing.T) {
+	t.Parallel()
+
+	cfg, err := Load(env(map[string]string{"TRUSTED_PROXIES": "10.0.0.0/8, 192.168.1.10"}))
+	if err != nil {
+		t.Fatalf("Load() error = %v, want nil", err)
+	}
+	if len(cfg.TrustedProxies) != 2 {
+		t.Errorf("TrustedProxies = %v, want two entries", cfg.TrustedProxies)
+	}
+	if _, err := Load(env(map[string]string{"TRUSTED_PROXIES": "nonsense"})); err == nil {
+		t.Error("Load() error = nil, want an error for a malformed TRUSTED_PROXIES")
+	}
+}
+
 func TestLoadRejectsAnInvalidSiteURL(t *testing.T) {
 	t.Parallel()
 

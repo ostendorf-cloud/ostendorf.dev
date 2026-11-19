@@ -6,8 +6,11 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"net/netip"
 	"net/url"
 
+	"github.com/ostendorf-cloud/govue/analytics"
+	"github.com/ostendorf-cloud/govue/clientip"
 	"github.com/ostendorf-cloud/govue/envconf"
 	"github.com/ostendorf-cloud/govue/logging"
 )
@@ -31,6 +34,15 @@ type Config struct {
 	// and robots.txt URL is built from.
 	SiteURL  *url.URL
 	LogLevel slog.Level
+	// TrustedProxies are the proxies whose X-Forwarded-For header is
+	// believed (TRUSTED_PROXIES, comma separated CIDRs). Without them a
+	// deployment behind a proxy sees only the proxy's address, and page
+	// view counting then counts nothing.
+	TrustedProxies []netip.Prefix
+	// Umami is the connection to Umami. Its zero value counts nothing: both
+	// UMAMI_URL and UMAMI_WEBSITE_ID must be set to turn counting on, and
+	// exactly one of them is an error. Neither is a secret.
+	Umami analytics.Config
 }
 
 // Load reads every setting through envconf, so a misconfigured deployment
@@ -50,6 +62,18 @@ func Load(getenv func(string) string) (Config, error) {
 		problems = append(problems, err)
 	}
 	cfg.LogLevel = level
+
+	proxies, err := clientip.ParseCIDRs(l.String("TRUSTED_PROXIES", ""))
+	if err != nil {
+		problems = append(problems, err)
+	}
+	cfg.TrustedProxies = proxies
+
+	umami, err := analytics.LoadConfig(getenv)
+	if err != nil {
+		problems = append(problems, err)
+	}
+	cfg.Umami = umami
 
 	if err := errors.Join(append(problems, l.Err())...); err != nil {
 		return Config{}, fmt.Errorf("config: %w", err)
