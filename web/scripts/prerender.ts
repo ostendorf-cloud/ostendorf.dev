@@ -16,11 +16,21 @@ import { fileURLToPath } from 'node:url'
 import { createSSRApp } from 'vue'
 import { renderToString } from 'vue/server-renderer'
 import { createMemoryHistory } from 'vue-router'
-import { useTheme } from '@ostendorf-cloud/govue'
+import { hreflangLinks, localeFromPath, useTheme, type LocaleCode } from '@ostendorf-cloud/govue'
 
 import App from '../src/App.vue'
+import { createSiteI18n } from '../src/lib/language'
 import { routeTable } from '../src/lib/routeTable'
-import { canonical, fullTitle, NOT_FOUND, pageMeta, type PageRoute } from '../src/lib/seo'
+import {
+  canonical,
+  fullTitle,
+  NOT_FOUND,
+  pageMeta,
+  path,
+  SITE_URL,
+  type PageRoute,
+} from '../src/lib/seo'
+import { sitemapXml } from '../src/lib/sitemap'
 import { THEME_NAME } from '../src/lib/theme'
 import { createAppRouter, NOT_FOUND_ROUTE_NAME } from '../src/router'
 
@@ -39,13 +49,33 @@ useTheme({ theme: THEME_NAME })
  *  route it names, plus the one page the table itself does not carry:
  *  the 404 page, which answers no route and so is not part of the table
  *  internal/webapp's sitemap and mux registration read either. */
-function loadPages(): Array<{ routerName: string; seoRoute: PageRoute; file: string }> {
-  const pages = routeTable.map((entry) => ({
-    routerName: entry.name,
-    seoRoute: entry.name,
-    file: entry.file,
-  }))
-  pages.push({ routerName: NOT_FOUND_ROUTE_NAME, seoRoute: NOT_FOUND, file: '404.html' })
+interface Page {
+  routerName: string
+  seoRoute: PageRoute
+  file: string
+  /** The language of the page: the path prefix of a legal page, else English. */
+  locale: LocaleCode
+  /** The route's own path without the prefix ("/imprint"), set only for a page under a language prefix. */
+  source?: string
+}
+
+function loadPages(): Page[] {
+  const pages: Page[] = routeTable.map((entry) => {
+    const prefix = localeFromPath(`/${entry.slug}`)
+    return {
+      routerName: entry.name,
+      seoRoute: entry.name,
+      file: entry.file,
+      locale: prefix ?? 'en',
+      source: prefix === undefined ? undefined : entry.slug.slice(prefix.length) || '/',
+    }
+  })
+  pages.push({
+    routerName: NOT_FOUND_ROUTE_NAME,
+    seoRoute: NOT_FOUND,
+    file: '404.html',
+    locale: 'en',
+  })
   return pages
 }
 
@@ -104,10 +134,11 @@ async function loadManifest(): Promise<Assets> {
 /** renderBody server-renders the app at routerName, with a fresh router
  *  instance per page: nothing from one page's render may leak into the
  *  next. */
-async function renderBody(routerName: string): Promise<string> {
+async function renderBody(routerName: string, locale: LocaleCode): Promise<string> {
   const router = createAppRouter(createMemoryHistory())
 
   const app = createSSRApp(App)
+  app.use(createSiteI18n(locale))
   app.use(router)
 
   await router.push({ name: routerName })
@@ -116,11 +147,21 @@ async function renderBody(routerName: string): Promise<string> {
   return renderToString(app)
 }
 
-function renderHead(route: PageRoute, assets: Assets): string {
+function renderHead(page: Page, assets: Assets): string {
+  const route = page.seoRoute
   const meta = pageMeta(route)
   const title = fullTitle(route, meta)
   const url = canonical(route)
-
+  // A page under a language prefix names itself and its other languages
+  // through govue's own helper, so the head cannot disagree with the sitemap
+  // govue-check-legal reads.
+  const links =
+    page.source === undefined
+      ? `<link rel="canonical" href="${url}">`
+      : hreflangLinks({ source: page.source, locale: page.locale, path: path(route) }, SITE_URL)
+          .split('\n')
+          .map((line) => line.trim())
+          .join('\n    ')
   const styleLinks = assets.styles
     .map((href) => `<link rel="stylesheet" href="/${href}">`)
     .join('\n    ')
@@ -130,7 +171,7 @@ function renderHead(route: PageRoute, assets: Assets): string {
     <title>${escapeHtml(title)}</title>
     <meta name="description" content="${escapeHtml(meta.description)}">
     <meta name="robots" content="index, follow">
-    <link rel="canonical" href="${url}">
+    ${links}
     <meta property="og:type" content="website">
     <meta property="og:site_name" content="Simon Ostendorf">
     <meta property="og:title" content="${escapeHtml(title)}">
@@ -149,9 +190,9 @@ function renderHead(route: PageRoute, assets: Assets): string {
  *  data-mode is exactly how useTheme spells "follow the operating
  *  system" (see useTheme's own apply()), so pinning one here would be
  *  wrong for a visitor whose system disagrees with it. */
-function renderDocument(head: string, body: string): string {
+function renderDocument(head: string, body: string, locale: LocaleCode): string {
   return `<!doctype html>
-<html lang="en" data-theme="${THEME_NAME}">
+<html lang="${locale}" data-theme="${THEME_NAME}">
   <head>
     ${head}
   </head>
@@ -175,15 +216,22 @@ async function main(): Promise<void> {
   const pages = loadPages()
 
   for (const page of pages) {
-    const body = await renderBody(page.routerName)
-    const head = renderHead(page.seoRoute, assets)
-    const html = renderDocument(head, body)
+    const body = await renderBody(page.routerName, page.locale)
+    const head = renderHead(page, assets)
+    const html = renderDocument(head, body, page.locale)
 
     const target = join(outDir, page.file)
     await mkdir(dirname(target), { recursive: true })
     await writeFile(target, html, 'utf-8')
     console.log(`wrote ${target}`)
   }
+
+  // The sitemap the server serves is built at request time from the same
+  // table. This copy, for the same origin, is what govue-check-legal reads;
+  // cmd/website's test proves the two are identical.
+  const sitemap = join(outDir, 'sitemap.xml')
+  await writeFile(sitemap, sitemapXml(routeTable, SITE_URL), 'utf-8')
+  console.log(`wrote ${sitemap}`)
 }
 
 main().catch((error: unknown) => {

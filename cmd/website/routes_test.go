@@ -54,6 +54,12 @@ func TestPrerenderedOutputMatchesRouteTable(t *testing.T) {
 			// route table.
 			continue
 		}
+		if file == "sitemap.xml" {
+			// Not a page: the build time copy of the sitemap that
+			// govue-check-legal reads. TestPrerenderedSitemapIsTheServedSitemap
+			// proves it equals what the server answers.
+			continue
+		}
 		if !wantFiles[file] {
 			t.Errorf("prerendered file %q answers no route in routes.json", file)
 		}

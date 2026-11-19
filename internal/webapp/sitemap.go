@@ -58,5 +58,8 @@ func routeURL(base, slug string) string {
 	if slug == "" {
 		return base + "/"
 	}
+	if exactRoutes[slug] {
+		return base + "/" + slug
+	}
 	return base + "/" + slug + "/"
 }

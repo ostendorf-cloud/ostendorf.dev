@@ -23,23 +23,29 @@ import (
 // page means editing that one file, routes.json, not this map. A
 // malformed routes.json is a build bug, caught by internal/routes' own
 // tests before it ever reaches this package; see mustRouteFiles.
-var routeFiles = mustRouteFiles()
+var routeFiles, exactRoutes = mustRouteFiles()
 
 // mustRouteFiles loads the embedded route table and indexes it by slug.
+// The second map holds the slugs served without a trailing slash (the
+// table's "exact" flag), the shape of govue's legal paths.
 // A load failure here can only mean routes.json itself is malformed: it
 // is checked in, not a runtime input, so a panic here is the right
 // response rather than threading an error through every caller of this
 // package level table.
-func mustRouteFiles() map[string]string {
+func mustRouteFiles() (files map[string]string, exact map[string]bool) {
 	table, err := routes.Load()
 	if err != nil {
 		panic("webapp: " + err.Error())
 	}
-	files := make(map[string]string, len(table))
+	files = make(map[string]string, len(table))
+	exact = make(map[string]bool)
 	for _, r := range table {
 		files[r.Slug] = r.File
+		if r.Exact {
+			exact[r.Slug] = true
+		}
 	}
-	return files
+	return files, exact
 }
 
 // routeSlugs lists routeFiles' keys in a deterministic, sorted order, so
@@ -60,6 +66,11 @@ func routeSlugs() []string {
 func routePattern(slug string) string {
 	if slug == "" {
 		return "GET /{$}"
+	}
+	if exactRoutes[slug] {
+		// No trailing slash: "/de/imprint" is the one path govue's footer
+		// links and its build check expect.
+		return "GET /" + slug
 	}
 	return "GET /" + slug + "/{$}"
 }
@@ -181,8 +192,11 @@ func (p *pageServer) pageHandler() http.Handler {
 // isKnownRoute reports whether path, once canonicalised with a trailing
 // slash, names a route slug in p.routes.
 func (p *pageServer) isKnownRoute(path string) bool {
-	_, ok := p.routes[strings.Trim(path, "/")]
-	return ok
+	slug := strings.Trim(path, "/")
+	_, ok := p.routes[slug]
+	// An exact route is served without the slash and answers 404 with it, so
+	// a canonicalising redirect would only lead to another 404.
+	return ok && !exactRoutes[slug]
 }
 
 // serveFile writes the prerendered file at name, or falls back to the

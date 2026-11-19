@@ -1,11 +1,13 @@
 package webapp
 
 import (
+	"fmt"
 	"io/fs"
 	"net/http"
 	"net/url"
 
 	"github.com/ostendorf-cloud/govue/analytics"
+	"github.com/ostendorf-cloud/govue/language"
 )
 
 // Config is what NewHandler needs beyond the two filesystems it serves
@@ -59,6 +61,13 @@ func newMux(cfg Config, dist, prerendered fs.FS) (*http.ServeMux, error) {
 	mux.Handle("GET /robots.txt", h.robotsHandler())
 	mux.Handle("GET /sitemap.xml", h.sitemapHandler())
 	registerRoutes(mux, pages)
+	// The short and German legal paths redirect to the locale pages the route
+	// table serves. No terms: the site has none, so /terms and /agb stay 404.
+	// Registered on the mux itself, so the page view middleware sees them,
+	// and they answer 302, which it never counts.
+	if err := language.HandleLegal(mux, language.LegalConfig{}, nil); err != nil {
+		return nil, fmt.Errorf("webapp: %w", err)
+	}
 	mux.Handle("/", pages.pageHandler())
 	return mux, nil
 }

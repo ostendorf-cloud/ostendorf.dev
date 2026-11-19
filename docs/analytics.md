@@ -6,9 +6,9 @@ keeps the no-third-party-request property the site inherited from old_ostendorf.
 
 ## What is counted
 
-The statement below is the source for the privacy text. The privacy text itself belongs to the
-legal pages work and is not written here. It follows govue's privacy checklist
-(`docs/concepts/govue.md`, section "Analytics").
+The statement below is the source for the privacy text, `web/src/views/PrivacyView.vue`. A change
+here is a change there. It follows govue's privacy checklist (`docs/concepts/govue.md`, section
+"Analytics").
 
 - A page view is counted on the server after the page was served. No script runs, no cookie is
   set and nothing is stored on the visitor's device.

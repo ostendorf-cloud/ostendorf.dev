@@ -206,11 +206,15 @@ tasks:
       - pnpm run format
 
   prerender:
-    desc: Render every route to static HTML into cmd/website/prerendered
+    desc: Render every route to static HTML into cmd/website/prerendered, then check the legal pages
     dir: web
     deps: [web:build]
     cmds:
       - pnpm run prerender
+      # govue's check: imprint and privacy in both languages, listed in the
+      # sitemap, and linked from every prerendered page. Part of the target
+      # so every job that needs the prerendered output also runs it.
+      - pnpm run check:legal
 
   check:
     desc: Every check, one after another

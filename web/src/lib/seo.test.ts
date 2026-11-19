@@ -56,7 +56,7 @@ describe('descriptions', () => {
 
 describe('path and canonical', () => {
   it.each(routeTable)('resolves routes.json entry $name to its own slug', (entry) => {
-    const want = entry.slug === '' ? '/' : `/${entry.slug}/`
+    const want = entry.slug === '' ? '/' : entry.exact ? `/${entry.slug}` : `/${entry.slug}/`
     expect(path(entry.name)).toBe(want)
   })
 
