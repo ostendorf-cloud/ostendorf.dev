@@ -1,0 +1,7 @@
+{
+  "name": "ostendorf-dev",
+  "seeds": {
+    "neutral": "#4a5a6a",
+    "accent": "#1fb58f"
+  }
+}
