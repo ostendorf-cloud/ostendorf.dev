@@ -111,8 +111,8 @@ describe('legal pages', () => {
   })
 
   it.each([
-    ['de', ['30 Tage','14 Monaten', 'Art. 6 Abs. 1 lit. f DSGVO']],
-    ['en', ['30 days','14 months', 'Art. 6(1)(f) GDPR']],
+    ['de', ['30 Tage', '14 Monaten', 'Art. 6 Abs. 1 lit. f DSGVO']],
+    ['en', ['30 days', '14 months', 'Art. 6(1)(f) GDPR']],
   ] as const)('states retention and legal basis in %s', async (locale, needles) => {
     const { container } = await renderAt(`/${locale}/privacy`, locale)
     const text = (container.textContent ?? '').replace(/\s+/g, ' ')
