@@ -165,6 +165,74 @@ describe('legal pages', () => {
   it.each([
     [
       'de',
+      'Das Protokoll der Anwendung enthält pro Aufruf:',
+      [
+        'den Zeitpunkt des Aufrufs,',
+        'die Anfragemethode, zum Beispiel GET,',
+        'die Seite als Routenmuster, nicht die aufgerufene Adresse mit ihren Parametern,',
+        'den HTTP-Statuscode und die übertragene Datenmenge,',
+        'die Bearbeitungsdauer,',
+        'Ihre IP-Adresse, ermittelt hinter den vorgeschalteten Proxys.',
+      ],
+      /user-agent|referrer|verweisende/i,
+      'Das Protokoll des vorgeschalteten Ingress, der Ihre Anfrage zuerst annimmt, enthält in der üblichen Form eines Webserver-Protokolls:',
+      [
+        'Ihre IP-Adresse,',
+        'Datum und Uhrzeit der Anfrage,',
+        'die Anfragezeile (aufgerufene Seite bzw. Datei mit Parametern, Anfragemethode und Protokollversion),',
+        'den HTTP-Statuscode und die übertragene Datenmenge,',
+        'den User-Agent Ihres Browsers,',
+        'die verweisende Adresse (Referrer), sofern Ihr Browser sie übermittelt.',
+      ],
+    ],
+    [
+      'en',
+      'The log of the application contains, per request:',
+      [
+        'the time of the request,',
+        'the request method, for example GET,',
+        'the page as a route pattern, not the requested address with its parameters,',
+        'the HTTP status code and the amount of data sent,',
+        'the processing time,',
+        'your IP address, determined behind the proxies in front.',
+      ],
+      /user agent|referrer|referring/i,
+      'The log of the ingress in front of the application, which accepts your request first, contains, in the usual form of a web server log:',
+      [
+        'your IP address,',
+        'the date and time of the request,',
+        'the request line (the page or file requested with its parameters, the request method and the protocol version),',
+        'the HTTP status code and the amount of data sent,',
+        'the user agent of your browser,',
+        'the referring address (referrer), where your browser sends it.',
+      ],
+    ],
+  ] as const)(
+    'lists the exact fields of the application log and the ingress log in %s',
+    async (locale, appIntro, appFields, notLogged, ingressIntro, ingressFields) => {
+      const { container } = await renderAt(`/${locale}/privacy`, locale)
+      const listAfter = (intro: string) => {
+        const p = [...container.querySelectorAll('p')].find(
+          (el) => (el.textContent ?? '').replace(/\s+/g, ' ').trim() === intro,
+        )
+        expect(p, intro).toBeDefined()
+        const ul = p?.nextElementSibling
+        expect(ul?.tagName).toBe('UL')
+        return [...(ul?.querySelectorAll('li') ?? [])].map((li) =>
+          (li.textContent ?? '').replace(/\s+/g, ' ').trim(),
+        )
+      }
+
+      const app = listAfter(appIntro)
+      expect(app).toEqual(appFields)
+      expect(app.join(' ')).not.toMatch(notLogged)
+      expect(listAfter(ingressIntro)).toEqual(ingressFields)
+    },
+  )
+
+  it.each([
+    [
+      'de',
       [
         'Protokoll der Anwendung',
         'Routenmuster',
@@ -209,6 +277,16 @@ describe('legal pages', () => {
       }
     },
   )
+
+  it.each([
+    ['de', 'Die Kennung wechselt jeden Monat.', 'deshalb'],
+    ['en', 'The identifier changes every month.', 'therefore'],
+  ] as const)('states the monthly identifier plainly in %s', async (locale, stated, gone) => {
+    const { container } = await renderAt(`/${locale}/privacy`, locale)
+    const text = (container.textContent ?? '').replace(/\s+/g, ' ')
+    expect(text).toContain(stated)
+    expect(text).not.toContain(gone)
+  })
 
   it.each([
     ['de', 'Wenn Sie mir', 'erhalte ich'],

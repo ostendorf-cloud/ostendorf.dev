@@ -42,7 +42,7 @@ says them as the operator's facts:
 - Access logs (application and ingress) are kept 30 days. Umami data is kept 14 months.
 - Umami derives country, region and city from the shortened address and browser and operating
   system from the user agent. It forms a pseudonymous identifier from the shortened address, the
-  user agent, a secret key and the month, so the identifier changes monthly. The full address and
+  user agent, a secret key and the month. The identifier changes monthly. The full address and
   the full user agent are not stored. The wording is taken from ostendorf.tech, which runs the
   same Umami processing.
 - Legal basis for logs and counting: Art. 6(1)(f) GDPR. Interest for the logs: secure

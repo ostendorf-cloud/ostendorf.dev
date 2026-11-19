@@ -105,7 +105,7 @@ const { locale } = useLanguage()
         Aus der verkürzten Adresse leitet Umami Land, Region und Stadt ab, aus dem User-Agent
         Browser und Betriebssystem. Aus der verkürzten IP-Adresse, dem User-Agent, einem geheimen
         Schlüssel und dem laufenden Monat bildet Umami eine pseudonyme Kennung, um die Seitenaufrufe
-        eines Besuchs zusammenzufassen; die Kennung wechselt deshalb jeden Monat. Die vollständige
+        eines Besuchs zusammenzufassen. Die Kennung wechselt jeden Monat. Die vollständige
         IP-Adresse und der vollständige User-Agent werden nicht gespeichert, sondern nur die daraus
         abgeleiteten Angaben (Land, Region, Stadt, Browser, Betriebssystem) zusammen mit der
         pseudonymen Kennung. Durch die Kürzung ist die Stadt oft ungenau. Eine Abfrage-Zeichenfolge,
@@ -239,11 +239,11 @@ const { locale } = useLanguage()
         From the shortened address, Umami derives the country, region and city, and from the user
         agent the browser and the operating system. From the shortened IP address, the user agent, a
         secret key and the current month, Umami forms a pseudonymous identifier to group together
-        the page views of one visit; the identifier therefore changes every month. The full IP
-        address and the full user agent are not stored, only the information derived from them
-        (country, region, city, browser, operating system) together with the pseudonymous
-        identifier. The shortening makes the city less accurate. A query string, a token or an
-        identifier in the requested address does not leave the server.
+        the page views of one visit. The identifier changes every month. The full IP address and the
+        full user agent are not stored, only the information derived from them (country, region,
+        city, browser, operating system) together with the pseudonymous identifier. The shortening
+        makes the city less accurate. A query string, a token or an identifier in the requested
+        address does not leave the server.
       </p>
       <p>
         The statistics data is deleted after 14 months. The legal basis is Art. 6(1)(f) GDPR. Our
