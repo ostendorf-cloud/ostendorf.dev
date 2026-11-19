@@ -1,22 +1,18 @@
 <script setup lang="ts">
 import { GovueLegalPage, useLanguage } from '@ostendorf-cloud/govue'
-import { useRouter } from 'vue-router'
 
 import { operator } from '../legal/operator'
 
 // The site's own imprint text. govue supplies the page shell and no words.
 // The facts come from legal/operator.ts, which the privacy text shares.
 // There is no dispute resolution section, on purpose.
+// No navigate prop: the language switch is a full page load, every language
+// is its own prerendered page with its own head.
 const { locale } = useLanguage()
-const router = useRouter()
-
-function navigate(path: string): void {
-  void router.push(path)
-}
 </script>
 
 <template>
-  <GovueLegalPage page="imprint" :skip-link="false" back-href="/" :navigate="navigate">
+  <GovueLegalPage page="imprint" :skip-link="false" back-href="/">
     <div v-if="locale === 'de'" class="flex flex-col gap-4 text-text">
       <p>
         {{ operator.name }}<br />

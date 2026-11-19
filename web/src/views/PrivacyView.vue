@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { GovueLegalPage, useLanguage } from '@ostendorf-cloud/govue'
-import { useRouter } from 'vue-router'
 
 import { operator } from '../legal/operator'
 
@@ -9,16 +8,13 @@ import { operator } from '../legal/operator'
 // the Umami instance, retention, legal basis) is deliberately absent, and
 // listed in the pull request for the owner. There is no contact form here: the
 // site has none.
+// No navigate prop: the language switch is a full page load, every language
+// is its own prerendered page with its own head.
 const { locale } = useLanguage()
-const router = useRouter()
-
-function navigate(path: string): void {
-  void router.push(path)
-}
 </script>
 
 <template>
-  <GovueLegalPage page="privacy" :skip-link="false" back-href="/" :navigate="navigate">
+  <GovueLegalPage page="privacy" :skip-link="false" back-href="/">
     <div v-if="locale === 'de'" class="flex flex-col gap-4 text-text">
       <h2 class="text-xl font-semibold">Verantwortlicher</h2>
       <p>
@@ -58,9 +54,9 @@ function navigate(path: string): void {
         </li>
       </ul>
       <p>
-        Aus der verkürzten Adresse leitet Umami das Land und in der Regel die Region ab. Eine
-        Abfrage-Zeichenfolge, ein Token oder eine Kennung der aufgerufenen Adresse verlässt den
-        Server nicht.
+        Aus der verkürzten Adresse leitet Umami Land, Region und Stadt ab. Durch die Kürzung ist die
+        Stadt oft ungenau. Eine Abfrage-Zeichenfolge, ein Token oder eine Kennung der aufgerufenen
+        Adresse verlässt den Server nicht.
       </p>
       <p>
         Wenn Ihr Browser Do Not Track (<code>DNT: 1</code>) oder Global Privacy Control (<code
@@ -132,8 +128,9 @@ function navigate(path: string): void {
         </li>
       </ul>
       <p>
-        From the shortened address, Umami derives the country and usually the region. A query
-        string, a token or an identifier in the requested address does not leave the server.
+        From the shortened address, Umami derives the country, region and city. The shortening makes
+        the city less accurate. A query string, a token or an identifier in the requested address
+        does not leave the server.
       </p>
       <p>
         If your browser sends Do Not Track (<code>DNT: 1</code>) or Global Privacy Control (<code

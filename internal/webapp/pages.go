@@ -192,11 +192,8 @@ func (p *pageServer) pageHandler() http.Handler {
 // isKnownRoute reports whether path, once canonicalised with a trailing
 // slash, names a route slug in p.routes.
 func (p *pageServer) isKnownRoute(path string) bool {
-	slug := strings.Trim(path, "/")
-	_, ok := p.routes[slug]
-	// An exact route is served without the slash and answers 404 with it, so
-	// a canonicalising redirect would only lead to another 404.
-	return ok && !exactRoutes[slug]
+	_, ok := p.routes[strings.Trim(path, "/")]
+	return ok
 }
 
 // serveFile writes the prerendered file at name, or falls back to the

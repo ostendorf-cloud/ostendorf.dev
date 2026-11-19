@@ -74,8 +74,14 @@ describe('legal pages', () => {
 
   it('states the page view counting fields in both languages', async () => {
     for (const [locale, needles] of [
-      ['de', ['Umami', 'verkürzt', 'kein Cookie', 'Do Not Track', 'Sec-GPC']],
-      ['en', ['Umami', 'shortened', 'no cookie', 'Do Not Track', 'Sec-GPC']],
+      [
+        'de',
+        ['Umami', 'verkürzt', 'kein Cookie', 'Land, Region und Stadt', 'Do Not Track', 'Sec-GPC'],
+      ],
+      [
+        'en',
+        ['Umami', 'shortened', 'no cookie', 'country, region and city', 'Do Not Track', 'Sec-GPC'],
+      ],
     ] as const) {
       const { container, unmount } = await renderAt(`/${locale}/privacy`, locale)
       for (const needle of needles) {
