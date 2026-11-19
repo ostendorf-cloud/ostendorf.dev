@@ -22,8 +22,8 @@ const links: ProfileLink[] = [
   },
   {
     label: 'Email',
-    handle: 'simon.ostendorf@stackmeister.com',
-    href: 'mailto:simon.ostendorf@stackmeister.com',
+    handle: 'simon@ostendorf.dev',
+    href: 'mailto:simon@ostendorf.dev',
   },
 ]
 </script>

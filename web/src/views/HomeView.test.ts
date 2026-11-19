@@ -23,7 +23,7 @@ describe('HomeView', () => {
     )
     expect(screen.getByRole('link', { name: 'Email' })).toHaveAttribute(
       'href',
-      'mailto:simon.ostendorf@stackmeister.com',
+      'mailto:simon@ostendorf.dev',
     )
   })
 })
