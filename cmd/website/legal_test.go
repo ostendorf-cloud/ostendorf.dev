@@ -2,6 +2,7 @@ package main
 
 import (
 	"io/fs"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -30,7 +31,7 @@ func TestPrerenderedSitemapIsTheServedSitemap(t *testing.T) {
 	}
 	cfg := testCfg()
 	cfg.SiteURL = site
-	h, err := buildHandler(cfg, nil)
+	h, err := buildHandler(cfg, slog.New(slog.DiscardHandler), nil)
 	if err != nil {
 		t.Fatalf("buildHandler() error = %v", err)
 	}

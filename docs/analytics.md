@@ -18,8 +18,9 @@ here is a change there. It follows govue's privacy checklist (`docs/concepts/gov
 - The page is reported as its route pattern, for example `/`, never as the requested address. A
   query string, a token, an id or any other part of the address does not leave the server. A
   request that matched no route pattern counts nothing.
-- What is sent to Umami: the route pattern, the referring site as an origin only (no path), the
-  first language tag of the browser, the browser's user agent and the visitor's IP address.
+- What is sent to Umami: the route pattern, the referring site as an origin (protocol, domain
+  and, where present, port, no path or parameters), the first language tag of the browser, the
+  browser's user agent and the visitor's IP address.
 - The IP address is shortened before it is sent: to its first three bytes for IPv4 and its first
   six bytes for IPv6. Umami derives the country, region and city from it. The shortening makes
   the city less accurate. The site never sets `FullIP`.
@@ -31,16 +32,44 @@ here is a change there. It follows govue's privacy checklist (`docs/concepts/gov
   dropped and counted in `analytics_views_dropped_total`. A failure is logged at warn level: the
   first of a class at once, then at most once a minute with the count since the last line.
 
-## What the owner still has to state
+## Operator facts
 
-These are not properties of the code and belong in the privacy text:
+These are not properties of the code. The owner stated them on 2026-11-19, and the privacy text
+says them as the operator's facts:
 
-- Who runs the Umami instance and where, and that no third party receives the data.
-- What Umami stores of the shortened address, how long it keeps the data and the legal basis.
+- The site and the Umami instance run on the owner's own hardware in Germany. There is no
+  hosting provider and no processor for hosting.
+- Access logs (application and ingress) are kept 30 days. Umami data is kept 14 months.
+- Umami derives country, region and city from the shortened address and browser and operating
+  system from the user agent. It forms a pseudonymous identifier from the shortened address, the
+  user agent, a secret key and the month. The identifier changes monthly. The full address and
+  the full user agent are not stored. The wording is taken from ostendorf.tech, which runs the
+  same Umami processing.
+- Legal basis for logs and counting: Art. 6(1)(f) GDPR. Interest for the logs: secure
+  operation, error analysis, abuse defence. Interest for the counting: understanding how the
+  site is used. The text says the interest was weighed against the visitor's rights and the
+  data is kept minimal. It names no recipients, no third country and no data protection officer
+  (owner decision).
+- Objection (Art. 21 GDPR): by e-mail to the address in the imprint, and for the counting
+  automatically through Do Not Track and Global Privacy Control.
+
+## Access logs
+
+Two logs exist, and the privacy text states them apart.
+
+- The application log is govue's `middleware.AccessLog`, one line per request to the site's
+  slog logger: time, method, route pattern, status, bytes, duration in milliseconds and the
+  client address resolved behind `TRUSTED_PROXIES`. It has no user agent, no referrer, no raw
+  path and no query. A panic is logged with status 500 and raised again unchanged.
+- The ingress log is the cluster's, outside this code. The privacy text states the standard
+  fields of the old simon-ostendorf.de privacy template: IP address, date and time, request line
+  (path and query, method, protocol version), status, bytes, user agent and referrer. The owner
+  must confirm that these are the fields the cluster's ingress writes.
 
 ## Configuration
 
-Counting is off unless both variables are set. Setting only one stops the start.
+Counting is on in production, where both variables are set. It is off unless both are set, and
+setting only one stops the start.
 
 | Variable           | Meaning                                               | Secret |
 | ------------------ | ----------------------------------------------------- | ------ |
@@ -68,6 +97,9 @@ chart the values are `config.umami.url`, `config.umami.websiteId` and `config.tr
 
 `internal/webapp` wraps the mux directly with the analytics middleware. It reads the route
 pattern the mux sets on the request, so no middleware that replaces the request, such as a
-request id or security header middleware, may sit between the two. A page added to
+request id or security header middleware, may sit between the two. The chain, outermost first,
+is the logger carrier (puts the slog logger into the request context), the access log, the
+analytics middleware, the mux. Only the logger carrier replaces the request, and it sits outside
+both. A page added to
 `internal/routes/routes.json` is counted under its pattern with no further work, for example
 `/en/` and `/de/` once those routes exist.
