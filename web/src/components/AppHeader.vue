@@ -11,6 +11,7 @@ const route = useRoute()
 // each add their own nav item once their own issue lands.
 const items = computed<NavItem[]>(() => [
   { href: '/', label: 'Home', current: route.name === 'home' },
+  { href: '/skills/', label: 'Skills', current: route.name === 'skills' },
 ])
 </script>
 
