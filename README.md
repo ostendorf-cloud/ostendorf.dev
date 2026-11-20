@@ -49,6 +49,8 @@ runtime stage with no shell) and serves the site at `http://localhost:8080`.
 `docker-compose.yaml` is for local development only; see `charts/ostendorf.dev/README.md` for a
 cluster installation.
 
+The published image is one manifest list covering `linux/amd64` and `linux/arm64`.
+
 `scripts/smoke-test-image.sh <image-ref>` starts an already built image the same way and
 asserts its admin listener (`:8081`) answers `/healthz`, `/readyz` and `/metrics`, its public
 listener serves a request, and the public listener itself does not answer `/metrics`. The
