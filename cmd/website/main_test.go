@@ -10,6 +10,7 @@ import (
 	"github.com/ostendorf-cloud/govue/health"
 
 	"github.com/ostendorf-cloud/ostendorf.dev/internal/config"
+	"github.com/ostendorf-cloud/ostendorf.dev/internal/content"
 )
 
 func testCfg() config.Config {
@@ -26,7 +27,7 @@ func TestEmbeddedDistBuildsAWorkingHandler(t *testing.T) {
 		t.Fatalf("fs.Sub(distFS, \"dist\") error = %v", err)
 	}
 
-	if _, err := buildHandler(testCfg()); err != nil {
+	if _, err := buildHandler(testCfg(), content.Dataset{}); err != nil {
 		t.Fatalf("buildHandler() error = %v", err)
 	}
 

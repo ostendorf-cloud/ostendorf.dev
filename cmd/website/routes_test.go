@@ -5,7 +5,9 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/ostendorf-cloud/ostendorf.dev/internal/content"
 	"github.com/ostendorf-cloud/ostendorf.dev/internal/routes"
+	"github.com/ostendorf-cloud/ostendorf.dev/internal/webapp"
 )
 
 // TestPrerenderedOutputMatchesRouteTable is the check that proves
@@ -31,6 +33,16 @@ func TestPrerenderedOutputMatchesRouteTable(t *testing.T) {
 	if err != nil {
 		t.Fatalf("routes.Load() error = %v", err)
 	}
+	// The project pages come from the embedded dataset, not from the table.
+	dataset, err := content.Embedded()
+	if err != nil {
+		t.Fatalf("content.Embedded() error = %v", err)
+	}
+	projects, err := webapp.ProjectRoutes(dataset)
+	if err != nil {
+		t.Fatalf("webapp.ProjectRoutes() error = %v", err)
+	}
+	table = append(table, projects...)
 	wantFiles := make(map[string]bool, len(table))
 	for _, r := range table {
 		wantFiles[r.File] = true

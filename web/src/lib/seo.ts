@@ -55,11 +55,14 @@ export interface PageMeta {
  *  exactly routeTable's names plus NOT_FOUND. */
 export const titles: Record<string, string> = {
   home: 'Simon Ostendorf',
+  projects: 'Projects',
   notFound: 'Page not found',
 }
 
 export const descriptions: Record<string, string> = {
   home: 'Simon Ostendorf — DevOps & Cloud Engineer. Projects, skills and contact.',
+  projects:
+    'The projects of Simon Ostendorf, each with its description, languages and latest release.',
   notFound: 'The page you were looking for does not exist.',
 }
 
@@ -73,4 +76,36 @@ export function pageMeta(route: PageRoute): PageMeta {
  *  the predecessor site's own convention. */
 export function fullTitle(route: PageRoute, meta: PageMeta): string {
   return route === 'home' ? meta.title : `${meta.title} – Simon Ostendorf`
+}
+
+// Project pages. Their paths and texts come from the generated dataset, not
+// from routes.json, so they are not in the maps above.
+
+/** PROJECT is the route name of a project page: pass it to fullTitle. */
+export const PROJECT = 'project' as const
+
+/** MAX_DESCRIPTION is where a meta description is cut. */
+const MAX_DESCRIPTION = 155
+
+/** projectPath is the absolute path of the page of project id. */
+export function projectPath(id: string): string {
+  return `/projects/${id}/`
+}
+
+/** projectCanonical is the absolute URL of the page of project id. */
+export function projectCanonical(id: string): string {
+  return SITE_URL + projectPath(id)
+}
+
+/** projectMeta is the title and meta description of one project page: the
+ *  project's name, and its hand written description cut at a word boundary,
+ *  or a plain sentence when it has none. */
+export function projectMeta(project: { name: string; description: string | null }): PageMeta {
+  const text = project.description ?? `${project.name}, a project of Simon Ostendorf.`
+  if (text.length <= MAX_DESCRIPTION) {
+    return { title: project.name, description: text }
+  }
+  const cut = text.slice(0, MAX_DESCRIPTION)
+  const end = cut.lastIndexOf(' ')
+  return { title: project.name, description: `${cut.slice(0, end > 0 ? end : MAX_DESCRIPTION)}...` }
 }

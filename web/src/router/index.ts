@@ -9,7 +9,13 @@ import { routeTable } from '../lib/routeTable'
  *  rather than crashing the app. */
 export const views: Record<string, () => Promise<unknown>> = {
   home: () => import('../views/HomeView.vue'),
+  projects: () => import('../views/ProjectsView.vue'),
 }
+
+/** PROJECT_ROUTE_NAME is the one page of a project. Its paths come from the
+ *  generated dataset, not from routes.json, so it is written by hand here, the
+ *  way the 404 page is; internal/webapp serves and lists the same paths. */
+export const PROJECT_ROUTE_NAME = 'project'
 
 const notFoundView = () => import('../views/NotFoundView.vue')
 
@@ -38,6 +44,11 @@ export const pageRoutes: RouteRecordRaw[] = routeTable.map((entry) => ({
 
 const routes: RouteRecordRaw[] = [
   ...pageRoutes,
+  {
+    path: '/projects/:id/',
+    name: PROJECT_ROUTE_NAME,
+    component: () => import('../views/ProjectView.vue'),
+  },
   {
     path: '/:pathMatch(.*)*',
     name: NOT_FOUND_ROUTE_NAME,

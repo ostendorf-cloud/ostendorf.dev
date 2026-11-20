@@ -45,9 +45,9 @@ func mustRouteFiles() map[string]string {
 // routeSlugs lists routeFiles' keys in a deterministic, sorted order, so
 // registering one http.ServeMux pattern per slug never depends on Go's
 // unspecified map iteration order.
-func routeSlugs() []string {
-	slugs := make([]string, 0, len(routeFiles))
-	for slug := range routeFiles {
+func routeSlugs(routes map[string]string) []string {
+	slugs := make([]string, 0, len(routes))
+	for slug := range routes {
 		slugs = append(slugs, slug)
 	}
 	slices.Sort(slugs)
@@ -69,7 +69,7 @@ func routePattern(slug string) string {
 // exercising the real registration never has to hand-duplicate a route
 // pattern string.
 func registerRoutes(mux *http.ServeMux, p *pageServer) {
-	for _, slug := range routeSlugs() {
+	for _, slug := range routeSlugs(p.routes) {
 		mux.Handle(routePattern(slug), p.routeHandler(slug))
 	}
 }
@@ -120,7 +120,7 @@ func (p *pageServer) assetHandler() http.Handler {
 // the pattern itself pins the slug literally, so no per-request lookup or
 // validation is needed.
 func (p *pageServer) routeHandler(slug string) http.Handler {
-	file := routeFiles[slug]
+	file := p.routes[slug]
 	return http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		p.serveFile(w, http.StatusOK, file)
 	})
