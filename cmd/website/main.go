@@ -52,7 +52,7 @@ func runWith(loadContent func() (content.Dataset, error)) error {
 		"github_fetched_at", dataset.Source.GitHub.FetchedAt,
 		"github_stale", dataset.Source.GitHub.Stale)
 
-	handler, err := buildHandler(cfg)
+	handler, err := buildHandler(cfg, dataset)
 	if err != nil {
 		return err
 	}
@@ -80,7 +80,7 @@ func runWith(loadContent func() (content.Dataset, error)) error {
 // prerendered HTML per route, through internal/webapp. A real application
 // adding a session, a form or a rate limiter wires govue's own middleware
 // pieces in here too; see AGENTS.md.
-func buildHandler(cfg config.Config) (http.Handler, error) {
+func buildHandler(cfg config.Config, dataset content.Dataset) (http.Handler, error) {
 	dist, err := fs.Sub(distFS, "dist")
 	if err != nil {
 		return nil, fmt.Errorf("website: %w", err)
@@ -90,7 +90,12 @@ func buildHandler(cfg config.Config) (http.Handler, error) {
 		return nil, fmt.Errorf("website: %w", err)
 	}
 
-	return webapp.NewHandler(webapp.Config{SiteURL: cfg.SiteURL}, dist, prerendered)
+	projects, err := webapp.ProjectRoutes(dataset)
+	if err != nil {
+		return nil, err
+	}
+
+	return webapp.NewHandler(webapp.Config{SiteURL: cfg.SiteURL, Routes: projects}, dist, prerendered)
 }
 
 // buildAdminHandler serves govue's admin listener: liveness, readiness and

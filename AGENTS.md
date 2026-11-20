@@ -69,6 +69,17 @@ application.
   dark-first placeholder palette, checked against WCAG 2.2 AA by
   `web/src/theme/contrast.test.ts`; see that file's own comment for why it is not the final
   brand.
+- The project pages: `routes.json` lists the index (`projects`). The page of one project
+  (`/projects/<id>/`) is not in the table because its id comes from the generated dataset:
+  `internal/webapp.ProjectRoutes` derives those routes from the embedded dataset and
+  `webapp.Config.Routes` serves and lists them, while `web/scripts/prerender.ts` writes
+  `projects/<id>/index.html` from the same data. `web/projectsData.ts` is a Vite plugin that
+  hands the browser bundle only the `projects` of the dataset (`virtual:projects-data`), never
+  the address or references. The views are `ProjectsView.vue` and `ProjectView.vue`, the model
+  and texts live in `web/src/projects/`. The list is sorted by id. The site is English only
+  until its language layer lands: the pages read the `en` document, `messages.ts` also carries
+  German. `cmd/website`'s `TestPrerenderedProjectPagesAreReadableWithoutJavaScript` checks the
+  real prerendered bytes.
 - `charts/ostendorf.dev/` is the Helm chart. Its `Chart.yaml` `name` and every rendered object
   name use `ostendorf-dev` instead of `ostendorf.dev`: a literal dot is invalid in a `Service`'s
   `metadata.name` (RFC 1035 label), which a chart named after the repository directly would
@@ -224,8 +235,6 @@ footer, the theme switch, the home page's own heading and the predecessor's prof
 built output. None of the site's other content is implemented yet. Left out, tracked as later
 milestones, each adding its own route to `internal/routes/routes.json` and its own nav item:
 
-- Projects, pulled from the GitHub API and merged with hand written descriptions from the `cv`
-  repository.
 - Skills and tools, fed from the same `cv` repository.
 - A contact form, ported later from `ostendorf.tech`: proof of work in the browser, SMTP
   delivery, no third party.

@@ -7,10 +7,14 @@ import ThemeToggle from './ThemeToggle.vue'
 
 const route = useRoute()
 
-// Only the home page exists so far; projects, skills and the uses page
-// each add their own nav item once their own issue lands.
+// Skills and the uses page add their own nav item once their own issue lands.
 const items = computed<NavItem[]>(() => [
   { href: '/', label: 'Home', current: route.name === 'home' },
+  {
+    href: '/projects/',
+    label: 'Projects',
+    current: route.name === 'projects' || route.name === 'project',
+  },
 ])
 </script>
 

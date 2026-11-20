@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { createMemoryHistory } from 'vue-router'
 
 import { routeTable } from '../lib/routeTable'
-import { createAppRouter, NOT_FOUND_ROUTE_NAME, views } from './index'
+import { createAppRouter, NOT_FOUND_ROUTE_NAME, PROJECT_ROUTE_NAME, views } from './index'
 
 // This is the router side of the same check
 // cmd/website/routes_test.go's TestPrerenderedOutputMatchesRouteTable
@@ -34,7 +34,7 @@ describe('router', () => {
     const registeredNames = router
       .getRoutes()
       .map((r) => String(r.name ?? ''))
-      .filter((name) => name !== '' && name !== NOT_FOUND_ROUTE_NAME)
+      .filter((name) => name !== '' && name !== NOT_FOUND_ROUTE_NAME && name !== PROJECT_ROUTE_NAME)
 
     for (const name of registeredNames) {
       expect(
@@ -43,5 +43,11 @@ describe('router', () => {
       ).toBe(true)
     }
     expect(registeredNames).toHaveLength(tableNames.size)
+  })
+
+  it('routes a project page to /projects/<id>/', () => {
+    expect(router.resolve({ name: PROJECT_ROUTE_NAME, params: { id: 'demo' } }).href).toBe(
+      '/projects/demo/',
+    )
   })
 })

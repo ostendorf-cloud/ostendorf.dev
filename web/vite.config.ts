@@ -4,11 +4,13 @@ import tailwindcss from '@tailwindcss/vite'
 import vue from '@vitejs/plugin-vue'
 import { defineConfig } from 'vitest/config'
 
+import { projectsData } from './projectsData.ts'
+
 // cmd/website embeds dist/ with a go:embed directive that resolves next to
 // the Go source file, which is why the build writes there directly rather
 // than into web/dist and leaving a copy step for the Taskfile to do.
 export default defineConfig({
-  plugins: [vue(), tailwindcss()],
+  plugins: [vue(), tailwindcss(), projectsData()],
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url)),

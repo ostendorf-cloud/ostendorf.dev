@@ -4,6 +4,8 @@ import (
 	"io/fs"
 	"net/http"
 	"net/url"
+
+	"github.com/ostendorf-cloud/ostendorf.dev/internal/routes"
 )
 
 // Config is what NewHandler needs beyond the two filesystems it serves
@@ -12,12 +14,18 @@ type Config struct {
 	// SiteURL is the site's own public origin, the base every
 	// robots.txt and sitemap.xml URL is built from.
 	SiteURL *url.URL
+	// Routes are pages beyond internal/routes' static table, such as one page
+	// per project, whose slugs come from the embedded dataset. They are
+	// served and listed in the sitemap like a table entry.
+	Routes []routes.Route
 }
 
-// handler carries the one piece of request-independent state the sitemap
-// and robots.txt handlers close over.
+// handler carries the request-independent state the sitemap and robots.txt
+// handlers close over: the site origin and the slug to file map of every
+// page that is served.
 type handler struct {
 	siteURL *url.URL
+	routes  map[string]string
 }
 
 // NewHandler builds the website's one HTTP handler: the built SPA's
@@ -30,7 +38,12 @@ func NewHandler(cfg Config, dist, prerendered fs.FS) (http.Handler, error) {
 	if err != nil {
 		return nil, err
 	}
-	h := &handler{siteURL: cfg.SiteURL}
+	pageRoutes, err := withExtraRoutes(routeFiles, cfg.Routes)
+	if err != nil {
+		return nil, err
+	}
+	pages.routes = pageRoutes
+	h := &handler{siteURL: cfg.SiteURL, routes: pageRoutes}
 
 	mux := http.NewServeMux()
 	mux.Handle("GET /assets/", pages.assetHandler())

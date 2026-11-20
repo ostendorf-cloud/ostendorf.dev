@@ -32,7 +32,7 @@ func TestRobotsHandlerNamesTheSitemapUnderTheConfiguredSiteURL(t *testing.T) {
 func TestSitemapHandlerListsEveryRouteTheHandlerActuallyServes(t *testing.T) {
 	t.Parallel()
 
-	h := &handler{siteURL: &url.URL{Scheme: "https", Host: "ostendorf.dev"}}
+	h := &handler{siteURL: &url.URL{Scheme: "https", Host: "ostendorf.dev"}, routes: routeFiles}
 
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/sitemap.xml", nil)

@@ -15,14 +15,26 @@ import { fileURLToPath } from 'node:url'
 
 import { createSSRApp } from 'vue'
 import { renderToString } from 'vue/server-renderer'
-import { createMemoryHistory } from 'vue-router'
+import { createMemoryHistory, type RouteLocationRaw } from 'vue-router'
 import { useTheme } from '@ostendorf-cloud/govue'
 
 import App from '../src/App.vue'
 import { routeTable } from '../src/lib/routeTable'
-import { canonical, fullTitle, NOT_FOUND, pageMeta, type PageRoute } from '../src/lib/seo'
+import {
+  canonical,
+  fullTitle,
+  NOT_FOUND,
+  pageMeta,
+  PROJECT,
+  projectCanonical,
+  projectMeta,
+  type PageMeta,
+  type PageRoute,
+} from '../src/lib/seo'
 import { THEME_NAME } from '../src/lib/theme'
-import { createAppRouter, NOT_FOUND_ROUTE_NAME } from '../src/router'
+import { embeddedProjects } from '../src/projects/data'
+import { assertProjectIDs, projectList } from '../src/projects/model'
+import { createAppRouter, NOT_FOUND_ROUTE_NAME, PROJECT_ROUTE_NAME } from '../src/router'
 
 const here = dirname(fileURLToPath(import.meta.url))
 const distDir = join(here, '../../cmd/website/dist')
@@ -39,14 +51,47 @@ useTheme({ theme: THEME_NAME })
  *  route it names, plus the one page the table itself does not carry:
  *  the 404 page, which answers no route and so is not part of the table
  *  internal/webapp's sitemap and mux registration read either. */
-function loadPages(): Array<{ routerName: string; seoRoute: PageRoute; file: string }> {
-  const pages = routeTable.map((entry) => ({
-    routerName: entry.name,
+function loadPages(): Page[] {
+  const pages: Page[] = routeTable.map((entry) => ({
+    location: { name: entry.name },
     seoRoute: entry.name,
+    meta: pageMeta(entry.name),
+    url: canonical(entry.name),
     file: entry.file,
   }))
-  pages.push({ routerName: NOT_FOUND_ROUTE_NAME, seoRoute: NOT_FOUND, file: '404.html' })
+  pages.push({
+    location: { name: NOT_FOUND_ROUTE_NAME },
+    seoRoute: NOT_FOUND,
+    meta: pageMeta(NOT_FOUND),
+    url: canonical(NOT_FOUND),
+    file: '404.html',
+  })
+  pages.push(...projectPages())
   return pages
+}
+
+/** projectPages is one page per project of the generated dataset, written to
+ *  projects/<id>/index.html: the paths internal/webapp serves from the same
+ *  dataset. The site is English only for now, so the English texts are used. */
+function projectPages(): Page[] {
+  const projects = projectList(embeddedProjects(), 'en')
+  assertProjectIDs(projects)
+  return projects.map((project) => ({
+    location: { name: PROJECT_ROUTE_NAME, params: { id: project.id } },
+    seoRoute: PROJECT,
+    meta: projectMeta(project),
+    url: projectCanonical(project.id),
+    file: `projects/${project.id}/index.html`,
+  }))
+}
+
+interface Page {
+  location: RouteLocationRaw
+  /** The route name fullTitle needs: only "home" gets no suffix. */
+  seoRoute: PageRoute
+  meta: PageMeta
+  url: string
+  file: string
 }
 
 interface ManifestEntry {
@@ -104,22 +149,22 @@ async function loadManifest(): Promise<Assets> {
 /** renderBody server-renders the app at routerName, with a fresh router
  *  instance per page: nothing from one page's render may leak into the
  *  next. */
-async function renderBody(routerName: string): Promise<string> {
+async function renderBody(location: RouteLocationRaw): Promise<string> {
   const router = createAppRouter(createMemoryHistory())
 
   const app = createSSRApp(App)
   app.use(router)
 
-  await router.push({ name: routerName })
+  await router.push(location)
   await router.isReady()
 
   return renderToString(app)
 }
 
-function renderHead(route: PageRoute, assets: Assets): string {
-  const meta = pageMeta(route)
-  const title = fullTitle(route, meta)
-  const url = canonical(route)
+function renderHead(page: Page, assets: Assets): string {
+  const meta = page.meta
+  const title = fullTitle(page.seoRoute, meta)
+  const url = page.url
 
   const styleLinks = assets.styles
     .map((href) => `<link rel="stylesheet" href="/${href}">`)
@@ -175,8 +220,8 @@ async function main(): Promise<void> {
   const pages = loadPages()
 
   for (const page of pages) {
-    const body = await renderBody(page.routerName)
-    const head = renderHead(page.seoRoute, assets)
+    const body = await renderBody(page.location)
+    const head = renderHead(page, assets)
     const html = renderDocument(head, body)
 
     const target = join(outDir, page.file)

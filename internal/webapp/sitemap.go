@@ -3,7 +3,6 @@ package webapp
 import (
 	"fmt"
 	"net/http"
-	"sort"
 	"strings"
 )
 
@@ -26,11 +25,7 @@ func (h *handler) sitemapHandler() http.Handler {
 		w.Header().Set("Content-Type", "application/xml; charset=utf-8")
 		w.Header().Set("Cache-Control", "public, max-age=3600")
 
-		slugs := make([]string, 0, len(routeFiles))
-		for slug := range routeFiles {
-			slugs = append(slugs, slug)
-		}
-		sort.Strings(slugs)
+		slugs := routeSlugs(h.routes)
 
 		base := h.siteBase()
 
