@@ -23,6 +23,9 @@ jobs:
           - platform: linux/arm64
             runner: ubuntu-24.04-arm
     runs-on: ${{ matrix.runner }}
+    # The Vue build and the Go build run inside the Dockerfile, then the
+    # image is pushed by digest: the slowest job in this workflow.
+    timeout-minutes: 20
     permissions:
       contents: read
       packages: write
@@ -71,6 +74,9 @@ jobs:
   image-merge:
     needs: image-build
     runs-on: ubuntu-latest
+    # Metadata only: download the digests, assemble and push one manifest
+    # list, inspect it back. No build.
+    timeout-minutes: 5
     permissions:
       packages: write
     steps:
