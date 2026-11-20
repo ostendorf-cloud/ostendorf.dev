@@ -55,11 +55,14 @@ export interface PageMeta {
  *  exactly routeTable's names plus NOT_FOUND. */
 export const titles: Record<string, string> = {
   home: 'Simon Ostendorf',
+  skills: 'Skills and tools',
   notFound: 'Page not found',
 }
 
 export const descriptions: Record<string, string> = {
   home: 'Simon Ostendorf — DevOps & Cloud Engineer. Projects, skills and contact.',
+  skills:
+    'Skills and tools of Simon Ostendorf, each with its level in words and the evidence behind it: projects, positions and certificates.',
   notFound: 'The page you were looking for does not exist.',
 }
 

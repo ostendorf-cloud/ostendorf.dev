@@ -69,6 +69,16 @@ application.
   dark-first placeholder palette, checked against WCAG 2.2 AA by
   `web/src/theme/contrast.test.ts`; see that file's own comment for why it is not the final
   brand.
+- The skills page (`/skills/`) is `web/src/views/SkillsView.vue`, fed by
+  `web/src/lib/dataset.ts` and `web/src/lib/skills.ts`. `useDataset` reads the file
+  `task content:build` wrote (a Vite glob, so a missing file fails the page, not every test) or a
+  dataset a test provides through `datasetKey`. Skills are grouped by level in words, each with
+  its evidence resolved against the same language's document: a project links through
+  `projectPath(id)` in `skills.ts`, the one place to change when the projects page settles its
+  route; a certificate shows its issuer and an `Expired` badge judged against the dataset's
+  `generated_at`, not the visitor's clock; a reference that resolves to nothing is shown as given.
+  Its messages (German and English) live in `web/src/i18n/skills.ts`. The site has no language
+  layer yet, so the page speaks English unless a `localeKey` is provided.
 - `charts/ostendorf.dev/` is the Helm chart. Its `Chart.yaml` `name` and every rendered object
   name use `ostendorf-dev` instead of `ostendorf.dev`: a literal dot is invalid in a `Service`'s
   `metadata.name` (RFC 1035 label), which a chart named after the repository directly would
@@ -226,7 +236,6 @@ milestones, each adding its own route to `internal/routes/routes.json` and its o
 
 - Projects, pulled from the GitHub API and merged with hand written descriptions from the `cv`
   repository.
-- Skills and tools, fed from the same `cv` repository.
 - A contact form, ported later from `ostendorf.tech`: proof of work in the browser, SMTP
   delivery, no third party.
 - A uses page: setup, tools, homelab.

@@ -9,6 +9,7 @@ import { routeTable } from '../lib/routeTable'
  *  rather than crashing the app. */
 export const views: Record<string, () => Promise<unknown>> = {
   home: () => import('../views/HomeView.vue'),
+  skills: () => import('../views/SkillsView.vue'),
 }
 
 const notFoundView = () => import('../views/NotFoundView.vue')

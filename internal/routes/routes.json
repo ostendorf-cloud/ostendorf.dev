@@ -1,1 +1,4 @@
-[{ "name": "home", "slug": "", "file": "index.html" }]
+[
+  { "name": "home", "slug": "", "file": "index.html" },
+  { "name": "skills", "slug": "skills", "file": "skills/index.html" }
+]
