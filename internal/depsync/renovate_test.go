@@ -5,6 +5,7 @@ import (
 	"os"
 	"regexp"
 	"slices"
+	"strings"
 	"testing"
 )
 
@@ -26,6 +27,8 @@ type renovateConfig struct {
 	} `json:"customManagers"`
 	PackageRules []struct {
 		MatchPackageNames []string          `json:"matchPackageNames"`
+		Description       string            `json:"description"`
+		AllowedVersions   string            `json:"allowedVersions"`
 		MatchManagers     []string          `json:"matchManagers"`
 		GroupName         string            `json:"groupName"`
 		Constraints       map[string]string `json:"constraints"`
@@ -185,4 +188,25 @@ func TestRenovateGroupsPnpmPins(t *testing.T) {
 		return
 	}
 	t.Fatal(`renovate.json has no package rule with matchPackageNames "pnpm"`)
+}
+
+// TestRenovateHoldsTypescriptBelowSeven fails when renovate.json has no rule that keeps
+// typescript below 7, or when the rule lost its range or its removal condition. Without the
+// rule Renovate raises TypeScript 7, which typescript-eslint and vue-tsc cannot load yet.
+func TestRenovateHoldsTypescriptBelowSeven(t *testing.T) {
+	t.Parallel()
+
+	for _, rule := range readRenovateConfig(t).PackageRules {
+		if !slices.Contains(rule.MatchPackageNames, "typescript") {
+			continue
+		}
+		if rule.AllowedVersions != "<7" {
+			t.Fatalf("the typescript rule has allowedVersions %q, want %q", rule.AllowedVersions, "<7")
+		}
+		if !strings.Contains(rule.Description, "Remove this rule when") {
+			t.Fatalf("the typescript rule description names no removal condition: %q", rule.Description)
+		}
+		return
+	}
+	t.Fatal(`renovate.json has no package rule with matchPackageNames "typescript"`)
 }
