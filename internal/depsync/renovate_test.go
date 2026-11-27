@@ -26,6 +26,7 @@ type renovateConfig struct {
 	} `json:"customManagers"`
 	PackageRules []struct {
 		MatchPackageNames []string          `json:"matchPackageNames"`
+		MatchManagers     []string          `json:"matchManagers"`
 		GroupName         string            `json:"groupName"`
 		Constraints       map[string]string `json:"constraints"`
 	} `json:"packageRules"`
@@ -161,4 +162,27 @@ func TestRenovateGovuePnpmConstraintMatchesMise(t *testing.T) {
 		return
 	}
 	t.Fatal("renovate.json has no package rule with groupName govue")
+}
+
+// TestRenovateGroupsPnpmPins fails when renovate.json has no rule that groups the mise.toml
+// pin and the govue rule's constraints.pnpm as one pnpm update. Without the group each bump
+// of one pin arrives alone and fails TestRenovateGovuePnpmConstraintMatchesMise.
+func TestRenovateGroupsPnpmPins(t *testing.T) {
+	t.Parallel()
+
+	for _, rule := range readRenovateConfig(t).PackageRules {
+		if !slices.Contains(rule.MatchPackageNames, "pnpm") {
+			continue
+		}
+		for _, manager := range []string{"mise", "renovate-config"} {
+			if !slices.Contains(rule.MatchManagers, manager) {
+				t.Fatalf("the pnpm rule matches managers %v, want %q among them", rule.MatchManagers, manager)
+			}
+		}
+		if rule.GroupName != "pnpm" {
+			t.Fatalf("the pnpm rule has groupName %q, want pnpm", rule.GroupName)
+		}
+		return
+	}
+	t.Fatal(`renovate.json has no package rule with matchPackageNames "pnpm"`)
 }
