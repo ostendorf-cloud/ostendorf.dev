@@ -166,8 +166,8 @@ milestones, each adding its own route to `internal/routes/routes.json` and its o
 
 - Projects, read at runtime from `cvd`, the `cv` repository's service, with their hand written
   descriptions and the GitHub languages and latest release `cvd` holds. This waits on two
-  changes in `cv`: GitHub enrichment in `cvd` and a public client package. The concept doc
-  describes the cache, the placeholder and the configuration.
+  changes in `cv`: GitHub enrichment in `cvd` and a public client package. ADR 0001 records
+  the cache, retry and placeholder policy, and the concept doc the configuration.
 - Skills and tools, read from the same `cvd` document.
 - A contact form, ported later from `ostendorf.tech`: proof of work in the browser, SMTP
   delivery, no third party.
