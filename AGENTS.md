@@ -141,6 +141,12 @@ pnpm/pnpm#12344, not backported to the pnpm 10 release line as far as this repos
 establish). `check:govue-version` therefore also reads `web/pnpm-lock.yaml` directly and fails
 when that dependency's resolution carries no `path: /web`.
 
+Renovate raises both halves as one pull request. `renovate.json` groups the Go module and the Vue
+package as `govue`, and a regex custom manager reads the tag from `web/package.json`, because
+Renovate's npm manager skips the `&path:/web` specifier. The shared preset `govue-lockfile`
+regenerates `web/pnpm-lock.yaml`. The group's `constraints.pnpm` equals the pin in `mise.toml`:
+move both together. `internal/depsync/renovate_test.go` fails when any of this goes missing.
+
 ## Verify before committing
 
 ```sh
