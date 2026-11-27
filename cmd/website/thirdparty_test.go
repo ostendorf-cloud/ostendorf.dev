@@ -29,9 +29,9 @@ import (
 // name another URL without ever fetching it.
 //
 // srcset on img, source and picture is checked candidate by candidate:
-// it is a comma-separated list of "<url> <descriptor>" pairs, not one
-// URL, so each candidate's own URL is pulled out and checked on its own
-// rather than matching the attribute's raw text.
+// it is a list of "<url> <descriptor>" candidates, not one URL, so each
+// candidate's own URL is pulled out as the HTML Standard defines it and
+// checked on its own rather than matching the attribute's raw text.
 //
 // It also reads every built CSS file, and every inline <style> block
 // inside an HTML document, for an absolute @import or url() pointing
@@ -132,21 +132,55 @@ func checkHTML(t *testing.T, path, document string) {
 
 // srcsetCandidateURLs splits a srcset attribute into its candidate
 // URLs, dropping each candidate's own width or pixel density
-// descriptor. srcset is a comma-separated list of image candidate
-// strings, each "<url>" optionally followed by whitespace and a
-// descriptor such as "2x" or "480w"; a URL containing a literal comma
-// has to be percent-encoded under that grammar, so splitting on "," is
-// exactly where the spec places the boundary between candidates.
+// descriptor. It follows the "Parse a srcset attribute" algorithm of the
+// HTML Standard (written from memory, not re-read): skip whitespace and
+// commas, collect the URL as a run of non-whitespace characters, and
+// remove the commas that end it; a URL that ended in commas has no
+// descriptor. Otherwise the descriptors follow, separated from the URL
+// by whitespace, and the candidate ends at the first comma outside
+// parentheses. A comma inside the URL does not end the candidate.
 func srcsetCandidateURLs(srcset string) []string {
 	var urls []string
-	for _, candidate := range strings.Split(srcset, ",") {
-		fields := strings.Fields(candidate)
-		if len(fields) == 0 {
+	i := 0
+	for i < len(srcset) {
+		for i < len(srcset) && (isSrcsetSpace(srcset[i]) || srcset[i] == ',') {
+			i++
+		}
+		start := i
+		for i < len(srcset) && !isSrcsetSpace(srcset[i]) {
+			i++
+		}
+		if start == i {
+			break
+		}
+		url := srcset[start:i]
+		if strings.HasSuffix(url, ",") {
+			urls = append(urls, strings.TrimRight(url, ","))
 			continue
 		}
-		urls = append(urls, fields[0])
+		urls = append(urls, url)
+
+		depth := 0
+		for i < len(srcset) {
+			c := srcset[i]
+			i++
+			if c == ',' && depth == 0 {
+				break
+			}
+			if c == '(' {
+				depth++
+			} else if c == ')' && depth > 0 {
+				depth--
+			}
+		}
 	}
 	return urls
+}
+
+// isSrcsetSpace reports whether c is ASCII whitespace as the HTML
+// Standard defines it.
+func isSrcsetSpace(c byte) bool {
+	return c == ' ' || c == '\t' || c == '\n' || c == '\f' || c == '\r'
 }
 
 func checkCSSTree(t *testing.T, tree fs.FS, root string) {
@@ -236,6 +270,41 @@ func TestSrcsetCandidateURLs(t *testing.T) {
 			name:  "trailing comma",
 			input: "/img/logo.png 1x,",
 			want:  []string{"/img/logo.png"},
+		},
+		{
+			name:  "comma inside the url of a sole candidate",
+			input: "https://cdn.example.com/w_100,h_50/logo.png 2x",
+			want:  []string{"https://cdn.example.com/w_100,h_50/logo.png"},
+		},
+		{
+			name:  "comma inside the url of the first of several candidates",
+			input: "https://cdn.example.com/w_100,h_50/logo.png 1x, /img/logo-2x.png 2x",
+			want:  []string{"https://cdn.example.com/w_100,h_50/logo.png", "/img/logo-2x.png"},
+		},
+		{
+			name:  "comma inside the url of the last of several candidates",
+			input: "/img/logo.png 1x, https://cdn.example.com/w_100,h_50/logo-2x.png 2x",
+			want:  []string{"/img/logo.png", "https://cdn.example.com/w_100,h_50/logo-2x.png"},
+		},
+		{
+			name:  "comma inside a url with no descriptor",
+			input: "/img/w_100,h_50/logo.png, /img/other.png",
+			want:  []string{"/img/w_100,h_50/logo.png", "/img/other.png"},
+		},
+		{
+			name:  "third party url as the first candidate",
+			input: "https://cdn.example.com/logo.png 1x, /img/logo-2x.png 2x",
+			want:  []string{"https://cdn.example.com/logo.png", "/img/logo-2x.png"},
+		},
+		{
+			name:  "comma directly after a url without whitespace",
+			input: "/img/a.png,/img/b.png 2x",
+			want:  []string{"/img/a.png,/img/b.png"},
+		},
+		{
+			name:  "commas only",
+			input: " , ,, ",
+			want:  nil,
 		},
 	}
 
