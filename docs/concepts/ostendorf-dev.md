@@ -4,54 +4,47 @@
 
 - The repository is a govue scaffold: embedded SPA, admin listener, chart, CI. No content.
 - `old_ostendorf.dev` is a static link page: GitHub, LinkedIn, email, nothing else.
-- Projects, skills and tools exist only as hand written text in the `cv` repository and
-  as repositories on GitHub, not as anything a visitor to this site can see.
-- There is no contact channel on this domain; a visitor has to already know an email address.
+- Projects, skills and tools exist as hand written data in the `cv` repository and as
+  repositories on GitHub. A visitor to this site sees none of it.
+- The `cv` repository serves that data through its service `cvd`. This site has no code
+  that reads it.
+- There is no contact channel on this domain. A visitor has to already know an email address.
 - There is no page for setup, tools or homelab.
 
 ## Goals
 
-- A visitor sees Simon's projects, each with GitHub metadata and a hand written description.
-- A visitor sees skills and tools, sourced from the `cv` repository.
-- A visitor can send a message through a contact form, delivered over SMTP.
+- A visitor sees Simon's projects, each with a hand written description and, where GitHub
+  has them, its languages and latest release, all read from `cvd`.
+- A visitor sees skills and tools, read from `cvd` at runtime.
 - A visitor sees a uses page: setup, tools, homelab.
+- A visitor can send a message through a contact form, delivered over SMTP.
+- A `cvd` outage after one successful read changes no page and fails no probe.
 - No request the site serves causes the visitor's browser to contact any third party, or
-  to receive any cookie set by anyone but this site. This holds for every page, not only
-  the contact form.
+  to receive any cookie set by anyone but this site. This includes `cvd`.
 - Project and skill pages stay crawlable without running JavaScript.
 
 ## Non goals
 
-- Editing CV or project description text in this repository; that stays in `cv`.
-- A CMS or an admin UI for content; content is data pulled in, not authored here.
+- Editing CV or project description text in this repository. That stays in `cv`.
+- A CMS or an admin UI for content. Content is data read in, not authored here.
+- The changes to the `cv` repository and to `cvd`. They are prerequisites, built there.
+- A page that renders the data (issues 5 and 6) and the PDF download.
+- A background timer, a disk copy of the document, a GitHub call from this site or a token.
 - Matching simon-ostendorf.de's or ostendorf.tech's own design system or copy.
 - Session based features beyond the contact form (no login, no profile).
 
 ## Approach
 
-- Data pipeline, build time: the build fetches the `cv` repository's JSON release
-  artefact and the GitHub API for the project list, merges them into one dataset, and
-  the Go binary embeds that dataset the same way it already embeds `dist/`. Neither the
-  running server nor the visitor's browser calls GitHub or the `cv` service at request
-  time. Recommendation: build time, not the `cv` service's runtime API. Reasons:
-  - It keeps the already-working "one self-contained binary" shape: no new runtime
-    dependency, no new failure mode, no new timeout and cache plumbing like
-    `ostendorf.tech`'s `internal/feedclient` needed for the Instagram feed.
-  - It keeps the data prerenderable and crawlable (see below); `ostendorf.tech`
-    deliberately left the Instagram section out of prerendering because it is runtime
-    data with nothing worth indexing, but projects are exactly the content this site
-    exists to have indexed.
-  - The cost is staleness: a `cv` release does not reach the site until the site
-    rebuilds. A `repository_dispatch` from `cv`'s own release workflow can trigger that
-    rebuild automatically; this needs its own look at `cv`'s CI, out of scope here.
-- GitHub refresh without a visitor's browser involved: the same build-time step calls
-  the GitHub API server side (in CI, or a scheduled rebuild) and writes the merged,
-  embedded dataset; the deployed binary never holds a GitHub token and never makes the
-  call itself.
-- Prerendering: recommend adopting `ostendorf.tech`'s pattern (`internal/routes`,
-  `task prerender`, embedded `prerendered/`) for the projects, skills and uses pages,
-  since build time is also when the data is current. A rebuild refreshes data and
-  prerendered HTML together, so there is no extra staleness from prerendering itself.
+- The Go server reads the cv document from `cvd` at runtime, server to server, into a cache
+  with the last good copy as fallback. [ADR 0001](../adr/0001-read-cv-data-from-cvd-at-runtime.md)
+  records the decision and the cache, retry and placeholder policy.
+- Two prerequisites in the `cv` repository come first: GitHub enrichment in `cvd`, and a public
+  Go client package that this site imports. The client ignores unknown keys, refuses only an
+  unknown `schema_version`, and sends `If-None-Match` on a refresh after expiry. The code round
+  of issue 4 waits for both.
+- The Go server renders every page that shows the data, from the cached document. Static pages
+  (home, uses, legal, 404) stay prerendered through `internal/routes` and `task prerender`.
+  How the Go server and the prerendered shell combine is for issue 5.
 - Contact form, ported from `ostendorf.tech`/`old_simon-ostendorf.de`, needs pieces this
   scaffold does not have yet:
   - `internal/pow` (challenge issue and verify) and `internal/contact` (validate, build
@@ -67,41 +60,52 @@
   - Single replica and `Recreate` rollout in the chart, since the in-process session
     store does not survive two pods, same constraint `ostendorf.tech` carries.
 - Boundary against the sibling sites:
-  - simon-ostendorf.de is the neutral hub and renders the CV page; it stays the single
+  - simon-ostendorf.de is the neutral hub and renders the CV page. It stays the single
     place for the short, identity-level summary and the outbound links to the other two.
-  - ostendorf.tech is Simon Ostendorf Veranstaltungstechnik, a separate business brand;
-    nothing about event technology belongs here.
+  - ostendorf.tech is Simon Ostendorf Veranstaltungstechnik, a separate business brand.
+    Nothing about event technology belongs here.
   - ostendorf.dev carries the deep, developer facing content only: the full project
     list, skills and tools, the uses page and this contact form. It does not restate the
     CV page's own summary.
 
+## Configuration and behaviour
+
+Decided by the owner on 2026-11-27. The names follow `internal/config/config.go` and
+`.env.example`: upper case, the service prefix first, durations as Go duration strings.
+
+| Setting | Default | Notes |
+| --- | --- | --- |
+| `CVD_URL` | none | Base URL of `cvd`, no path, no credentials. |
+| `CVD_CACHE_TTL` | `5m` | Age after which a request triggers a refresh. |
+| `CVD_TIMEOUT` | `5s` | Bound of one call to `cvd`, 1s to 30s as `UMAMI_TIMEOUT`. |
+
+- The chart exposes the three values under `config.cvd` (`url`, `cacheTtl`, `timeout`). It
+  renders each one only when set, as it does for Umami. `values.schema.json` checks the URL.
+- Without `CVD_URL` the site starts, logs one info line and serves the placeholder on the data
+  pages. A local run needs no `cvd`.
+- The placeholder is a short page in the site's shell that says the data is not available
+  yet. Home, uses, legal pages and the probes are unaffected.
+- The site requests `de` and `en` and keeps one copy per language.
+- The log carries one line per failed read, per refused schema version and per recovery.
+- The privacy page gets one sentence on the server to server call to `cvd`.
+
 ## Alternatives considered
 
-- Fetch `cv` and GitHub data at runtime from the site's own process (a `Syncer` like
-  `ostendorf.tech`'s `internal/feedclient`, polling the `cv` API and the GitHub API on
-  an interval). Dropped: couples this site's availability to the `cv` service and to
-  GitHub's API and its rate limit, and reintroduces the "unprerendered, not crawled"
-  trade-off `ostendorf.tech` accepted only for a section with nothing worth indexing.
-- A separate internal "projects" service in front of GitHub, mirroring `ostendorf.tech`'s
-  `cmd/feed` split. Dropped for now: that split earned its cost by moving a long lived
-  Meta access token out of the public facing binary; a build-time GitHub API call holds
-  no comparable secret, so the split has no matching benefit here.
-- Prerendering only the static pages (uses, home) and rendering projects and skills
-  client side from an embedded JSON. Dropped: it would leave the main reason to visit
-  the site uncrawlable, the opposite of the Instagram case this pattern is borrowed from.
+- The alternatives for reading the data are in ADR 0001: build time merge, a background
+  poller, a failed readiness probe, the browser calling `cvd`, and a client of this site's own.
+- Prerendering only the static pages and rendering projects and skills client side from an
+  embedded JSON. Dropped: it leaves the main reason to visit the site uncrawlable.
 
 ## Open questions
 
-- Does `cv`'s release workflow get a `repository_dispatch` (or similar) into this
-  repository so a new release rebuilds the site automatically? Owner: whoever specs the
-  `cv` repository's release pipeline next.
+- How do the Go server and the prerendered shell combine on the data pages? Owner: issue 5.
+- What is the final public URL of `cvd`? Owner: the site owner. It sets the chart value.
+- Which host is right, `cv.ostendorf.cloud` (the `cv` chart default) or
+  `cv.ostendorf.systems` (the issue text)? Owner: the site owner.
+- How does `cvd` reload its data without a restart? It reads once at start today. Owner: the
+  `cv` repository's sync work, see `cv`'s concept doc.
 - Where do SMTP credentials and the recipient address live operationally (which secret
   store, which chart values)? Owner: next milestone that implements the contact form.
-- Does the merged build-time dataset need a schema check against `cv`'s JSON release
-  artefact, and where does that check live? Owner: whoever implements the data pipeline.
 - Should ostendorf.dev link to simon-ostendorf.de and ostendorf.tech in its own nav or
   footer, and is there a shared convention for that across all three sites? Owner: not
   yet assigned.
-- What happens to the projects and skills pages when the GitHub API call fails during a
-  build: fail the build, or ship the last known good dataset? Owner: whoever implements
-  the data pipeline.
