@@ -39,7 +39,9 @@
   with the last good copy as fallback. [ADR 0001](../adr/0001-read-cv-data-from-cvd-at-runtime.md)
   records the decision and the cache, retry and placeholder policy.
 - Two prerequisites in the `cv` repository come first: GitHub enrichment in `cvd`, and a public
-  Go client package that this site imports. The code round of issue 4 waits for both.
+  Go client package that this site imports. The client ignores unknown keys, refuses only an
+  unknown `schema_version`, and sends `If-None-Match` on a refresh after expiry. The code round
+  of issue 4 waits for both.
 - The Go server renders every page that shows the data, from the cached document. Static pages
   (home, uses, legal, 404) stay prerendered through `internal/routes` and `task prerender`.
   How the Go server and the prerendered shell combine is for issue 5.

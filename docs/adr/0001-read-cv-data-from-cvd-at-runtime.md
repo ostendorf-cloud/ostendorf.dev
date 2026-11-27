@@ -1,6 +1,6 @@
 # 0001 Read the cv data from cvd at runtime
 
-- Status: accepted
+- Status: proposed
 - Date: 2026-11-27
 - Concept: [ostendorf.dev content](../concepts/ostendorf-dev.md)
 
@@ -19,7 +19,7 @@
 ## Decision
 
 The Go server reads the cv document from `cvd` on request into an in-memory cache, one entry
-per language, and serves the last good copy when `cvd` fails. The reasons follow as policy.
+per language, and serves the last good copy when `cvd` fails. The policy is:
 
 - Fetch on request, no timer. The first request after the cache expired triggers one refresh,
   and concurrent requests share it. A request that finds an expired copy serves it and does
