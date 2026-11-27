@@ -164,9 +164,11 @@ footer, the theme switch, the home page's own heading and the predecessor's prof
 built output. None of the site's other content is implemented yet. Left out, tracked as later
 milestones, each adding its own route to `internal/routes/routes.json` and its own nav item:
 
-- Projects, pulled from the GitHub API and merged with hand written descriptions from the `cv`
-  repository.
-- Skills and tools, fed from the same `cv` repository.
+- Projects, read at runtime from `cvd`, the `cv` repository's service, with their hand written
+  descriptions and the GitHub languages and latest release `cvd` holds. This waits on two
+  changes in `cv`: GitHub enrichment in `cvd` and a public client package. The concept doc
+  describes the cache, the placeholder and the configuration.
+- Skills and tools, read from the same `cvd` document.
 - A contact form, ported later from `ostendorf.tech`: proof of work in the browser, SMTP
   delivery, no third party.
 - A uses page: setup, tools, homelab.
