@@ -8,6 +8,7 @@ import (
 	"log/slog"
 	"net/netip"
 	"net/url"
+	"time"
 
 	"github.com/ostendorf-cloud/govue/analytics"
 	"github.com/ostendorf-cloud/govue/clientip"
@@ -18,6 +19,31 @@ import (
 // DefaultSiteURL is this site's own public origin, used when SITE_URL is
 // unset: the base every robots.txt and sitemap.xml URL is built from.
 const DefaultSiteURL = "https://ostendorf.dev"
+
+const (
+	// DefaultCVDCacheTTL is how long a copy of the cv document counts as
+	// fresh when CVD_CACHE_TTL is unset.
+	DefaultCVDCacheTTL = 5 * time.Minute
+	// DefaultCVDTimeout bounds one call to cvd when CVD_TIMEOUT is unset.
+	DefaultCVDTimeout = 5 * time.Second
+
+	minCVDCacheTTL = time.Second
+	maxCVDCacheTTL = 24 * time.Hour
+	minCVDTimeout  = time.Second
+	maxCVDTimeout  = 30 * time.Second
+)
+
+// CVD is how the site reads the cv document from cvd, the cv service.
+type CVD struct {
+	// URL is the base URL of cvd, without a path. Nil means cvd is not
+	// configured: the site then starts and serves the placeholder on the
+	// data pages.
+	URL *url.URL
+	// CacheTTL is the age after which a request triggers a refresh.
+	CacheTTL time.Duration
+	// Timeout bounds one call to cvd.
+	Timeout time.Duration
+}
 
 // Config is every setting this binary reads from the environment. There is
 // no secret-shaped field yet: this site serves a static SPA bundle and the
@@ -43,6 +69,9 @@ type Config struct {
 	// UMAMI_URL and UMAMI_WEBSITE_ID must be set to turn counting on, and
 	// exactly one of them is an error. Neither is a secret.
 	Umami analytics.Config
+	// CVD is the connection to cvd, from which the data pages read. None of
+	// its fields is a secret: the site holds no token for cvd.
+	CVD CVD
 }
 
 // Load reads every setting through envconf, so a misconfigured deployment
@@ -74,6 +103,16 @@ func Load(getenv func(string) string) (Config, error) {
 		problems = append(problems, err)
 	}
 	cfg.Umami = umami
+
+	cfg.CVD = CVD{
+		CacheTTL: l.Duration("CVD_CACHE_TTL", DefaultCVDCacheTTL, minCVDCacheTTL, maxCVDCacheTTL),
+		Timeout:  l.Duration("CVD_TIMEOUT", DefaultCVDTimeout, minCVDTimeout, maxCVDTimeout),
+	}
+	// CVD_URL is optional: envconf's URL reads an empty value as missing, so
+	// only a set value goes through it.
+	if l.String("CVD_URL", "") != "" {
+		cfg.CVD.URL = l.URL("CVD_URL", "")
+	}
 
 	if err := errors.Join(append(problems, l.Err())...); err != nil {
 		return Config{}, fmt.Errorf("config: %w", err)

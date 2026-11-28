@@ -4,6 +4,7 @@ import (
 	"log/slog"
 	"strings"
 	"testing"
+	"time"
 )
 
 // env builds a getenv function over a fixed map, the shape Load expects. A
@@ -170,5 +171,105 @@ func TestLoadRejectsAnInvalidSiteURL(t *testing.T) {
 	}
 	if !strings.Contains(err.Error(), "SITE_URL") {
 		t.Errorf("Load() error = %q, want it to name SITE_URL", err.Error())
+	}
+}
+
+func TestLoadReadsTheCVDSettings(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		name        string
+		env         map[string]string
+		wantURL     string
+		wantTTL     time.Duration
+		wantTimeout time.Duration
+	}{
+		{
+			name:        "nothing set",
+			wantTTL:     DefaultCVDCacheTTL,
+			wantTimeout: DefaultCVDTimeout,
+		},
+		{
+			name:        "every value set",
+			env:         map[string]string{"CVD_URL": "https://cv.example.test/", "CVD_CACHE_TTL": "30s", "CVD_TIMEOUT": "2s"},
+			wantURL:     "https://cv.example.test",
+			wantTTL:     30 * time.Second,
+			wantTimeout: 2 * time.Second,
+		},
+		{
+			name:        "a plain http name inside the cluster",
+			env:         map[string]string{"CVD_URL": "http://cvd.cv.svc:8080"},
+			wantURL:     "http://cvd.cv.svc:8080",
+			wantTTL:     DefaultCVDCacheTTL,
+			wantTimeout: DefaultCVDTimeout,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			cfg, err := Load(env(tc.env))
+			if err != nil {
+				t.Fatalf("Load() error = %v, want nil", err)
+			}
+			gotURL := ""
+			if cfg.CVD.URL != nil {
+				gotURL = cfg.CVD.URL.String()
+			}
+			if gotURL != tc.wantURL {
+				t.Errorf("CVD.URL = %q, want %q", gotURL, tc.wantURL)
+			}
+			if cfg.CVD.CacheTTL != tc.wantTTL {
+				t.Errorf("CVD.CacheTTL = %v, want %v", cfg.CVD.CacheTTL, tc.wantTTL)
+			}
+			if cfg.CVD.Timeout != tc.wantTimeout {
+				t.Errorf("CVD.Timeout = %v, want %v", cfg.CVD.Timeout, tc.wantTimeout)
+			}
+		})
+	}
+}
+
+func TestLoadRejectsAnInvalidCVDSetting(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		name string
+		env  map[string]string
+		want string
+	}{
+		{name: "url without a scheme", env: map[string]string{"CVD_URL": "cv.example.test"}, want: "CVD_URL"},
+		{name: "url with credentials", env: map[string]string{"CVD_URL": "https://user:pass@cv.example.test"}, want: "CVD_URL"},
+		{name: "cache lifetime that is no duration", env: map[string]string{"CVD_CACHE_TTL": "soon"}, want: "CVD_CACHE_TTL"},
+		{name: "cache lifetime below the minimum", env: map[string]string{"CVD_CACHE_TTL": "0s"}, want: "CVD_CACHE_TTL"},
+		{name: "timeout above the maximum", env: map[string]string{"CVD_TIMEOUT": "2m"}, want: "CVD_TIMEOUT"},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			_, err := Load(env(tc.env))
+			if err == nil {
+				t.Fatal("Load() error = nil, want an error")
+			}
+			if !strings.Contains(err.Error(), tc.want) {
+				t.Errorf("Load() error = %q, want it to name %s", err.Error(), tc.want)
+			}
+		})
+	}
+}
+
+func TestLoadReportsEveryCVDProblemTogether(t *testing.T) {
+	t.Parallel()
+
+	_, err := Load(env(map[string]string{"CVD_URL": "nonsense", "CVD_CACHE_TTL": "soon", "CVD_TIMEOUT": "2m"}))
+	if err == nil {
+		t.Fatal("Load() error = nil, want an error")
+	}
+	for _, key := range []string{"CVD_URL", "CVD_CACHE_TTL", "CVD_TIMEOUT"} {
+		if !strings.Contains(err.Error(), key) {
+			t.Errorf("Load() error = %q, want it to name %s", err.Error(), key)
+		}
 	}
 }
