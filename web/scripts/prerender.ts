@@ -28,11 +28,12 @@ import {
   pageMeta,
   path,
   SITE_URL,
+  UNAVAILABLE,
   type PageRoute,
 } from '../src/lib/seo'
 import { sitemapXml } from '../src/lib/sitemap'
 import { THEME_NAME } from '../src/lib/theme'
-import { createAppRouter, NOT_FOUND_ROUTE_NAME } from '../src/router'
+import { createAppRouter, NOT_FOUND_ROUTE_NAME, UNAVAILABLE_ROUTE_NAME } from '../src/router'
 
 const here = dirname(fileURLToPath(import.meta.url))
 const distDir = join(here, '../../cmd/website/dist')
@@ -74,6 +75,14 @@ function loadPages(): Page[] {
     routerName: NOT_FOUND_ROUTE_NAME,
     seoRoute: NOT_FOUND,
     file: '404.html',
+    locale: 'en',
+  })
+  // The placeholder a data page answers with, status 503, while cvd has
+  // delivered no document: like the 404 page it answers no route of the table.
+  pages.push({
+    routerName: UNAVAILABLE_ROUTE_NAME,
+    seoRoute: UNAVAILABLE,
+    file: 'unavailable.html',
     locale: 'en',
   })
   return pages

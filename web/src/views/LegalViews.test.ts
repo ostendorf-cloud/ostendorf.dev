@@ -91,6 +91,17 @@ describe('legal pages', () => {
     }
   })
 
+  it('states the server to server call for the cv content in both languages', async () => {
+    for (const [locale, needle] of [
+      ['de', 'von Server zu Server'],
+      ['en', 'from server to server'],
+    ] as const) {
+      const { container, unmount } = await renderAt(`/${locale}/privacy`, locale)
+      expect(container.textContent).toContain(needle)
+      unmount()
+    }
+  })
+
   it('states own hardware and names no hosting provider, without the old hedging', async () => {
     for (const [locale, own, gone] of [
       [

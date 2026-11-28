@@ -34,8 +34,21 @@ export const pageRoutes: RouteRecordRaw[] = routeTable.map((entry) => ({
   component: views[entry.name] ?? notFoundView,
 }))
 
+const unavailableView = () => import('../views/UnavailableView.vue')
+
+/** UNAVAILABLE_ROUTE_NAME is the placeholder the Go service answers with
+ *  status 503 when a page that reads from cvd has no data yet. Like the
+ *  404 page it is not part of routes.json: the server picks it by status,
+ *  never by path, so the path below only lets the router render it. */
+export const UNAVAILABLE_ROUTE_NAME = 'unavailable'
+
 const routes: RouteRecordRaw[] = [
   ...pageRoutes,
+  {
+    path: '/unavailable/',
+    name: UNAVAILABLE_ROUTE_NAME,
+    component: unavailableView,
+  },
   {
     path: '/:pathMatch(.*)*',
     name: NOT_FOUND_ROUTE_NAME,
