@@ -36,7 +36,7 @@ COPY web/ ./
 # The frontend reads the one route table out of internal/routes, through
 # web/src/lib/routeTable.ts, so this stage needs that file as well as web/
 # itself. It lives outside web/ because Go embeds the same file; see
-# AGENTS.md on why there is only one of it.
+# internal/routes/AGENTS.md on why there is only one of it.
 COPY internal/routes/routes.json /src/internal/routes/routes.json
 
 RUN pnpm run build && pnpm run prerender

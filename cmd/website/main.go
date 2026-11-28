@@ -141,7 +141,7 @@ func newResolver(cfg config.Config) *clientip.Resolver {
 // the pages and logger receiving the access log. A real application adding
 // a session, a form or a rate limiter wires govue's own middleware pieces
 // in here too, but never between the mux and views, which reads the route
-// pattern the mux sets; see AGENTS.md. store supplies the cv document to the
+// pattern the mux sets; see internal/webapp/AGENTS.md. store supplies the cv document to the
 // pages that render it.
 func buildHandler(cfg config.Config, logger *slog.Logger, views *analytics.Client, store webapp.DocumentSource) (http.Handler, error) {
 	dist, err := fs.Sub(distFS, "dist")

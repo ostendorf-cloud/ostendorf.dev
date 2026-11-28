@@ -1,6 +1,6 @@
 // Package webapp builds the website's one HTTP handler: the built SPA's
 // assets, the prerendered HTML per route, robots.txt and sitemap.xml, all
-// read from internal/routes' one route table. See AGENTS.md for how each
+// read from internal/routes' one route table. See internal/routes/AGENTS.md for how each
 // of this table's five consumers reads it.
 package webapp
 
