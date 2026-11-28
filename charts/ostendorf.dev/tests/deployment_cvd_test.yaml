@@ -1,0 +1,119 @@
+suite: deployment cvd configuration
+templates:
+  - templates/deployment.yaml
+tests:
+  - it: renders no cvd variable by default, so the site serves the placeholder
+    asserts:
+      - isNull:
+          path: spec.template.spec.containers[0].env
+
+  - it: renders only the address when only the address is set
+    set:
+      config:
+        cvd:
+          url: http://cvd.cv.svc.cluster.local:8080
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].env
+          value:
+            - name: CVD_URL
+              value: http://cvd.cv.svc.cluster.local:8080
+
+  - it: renders the address, the cache age and the timeout when all are set
+    set:
+      config:
+        cvd:
+          url: https://cvd.example.test
+          cacheTtl: 10m
+          timeout: 3s
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: CVD_URL
+            value: https://cvd.example.test
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: CVD_CACHE_TTL
+            value: 10m
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: CVD_TIMEOUT
+            value: 3s
+
+  - it: keeps the Umami variables beside the cvd ones
+    set:
+      config:
+        umami:
+          url: https://umami.example.test
+          websiteId: 0a1b2c3d-0000-4000-8000-000000000001
+        cvd:
+          url: https://cvd.example.test
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: UMAMI_URL
+            value: https://umami.example.test
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: CVD_URL
+            value: https://cvd.example.test
+
+  - it: never takes a cvd value from a secret, since none is one
+    set:
+      config:
+        cvd:
+          url: https://cvd.example.test
+          cacheTtl: 10m
+          timeout: 3s
+    asserts:
+      - notExists:
+          path: spec.template.spec.containers[0].env[0].valueFrom
+      - notExists:
+          path: spec.template.spec.containers[0].env[1].valueFrom
+      - notExists:
+          path: spec.template.spec.containers[0].env[2].valueFrom
+
+  - it: rejects an address that carries credentials
+    set:
+      config:
+        cvd:
+          url: https://user:pass@cvd.example.test
+    asserts:
+      - failedTemplate: {}
+
+  - it: rejects an address with no http or https scheme
+    set:
+      config:
+        cvd:
+          url: ftp://cvd.example.test
+    asserts:
+      - failedTemplate: {}
+
+  - it: rejects an address that carries a query
+    set:
+      config:
+        cvd:
+          url: https://cvd.example.test/?token=abc
+    asserts:
+      - failedTemplate: {}
+
+  - it: rejects a cache age that is no duration
+    set:
+      config:
+        cvd:
+          cacheTtl: soon
+    asserts:
+      - failedTemplate: {}
+
+  - it: rejects a timeout that is no duration
+    set:
+      config:
+        cvd:
+          timeout: 5 seconds
+    asserts:
+      - failedTemplate: {}

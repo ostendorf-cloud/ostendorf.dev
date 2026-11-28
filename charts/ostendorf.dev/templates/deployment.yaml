@@ -62,7 +62,7 @@ spec:
               containerPort: {{ .Values.service.adminPort }}
               protocol: TCP
           {{- with .Values.config }}
-          {{- if or .trustedProxyCidrs .umami.url .umami.websiteId }}
+          {{- if or .trustedProxyCidrs .umami.url .umami.websiteId .cvd.url .cvd.cacheTtl .cvd.timeout }}
           env:
             {{- if .trustedProxyCidrs }}
             - name: TRUSTED_PROXIES
@@ -75,6 +75,18 @@ spec:
             {{- if .umami.websiteId }}
             - name: UMAMI_WEBSITE_ID
               value: {{ .umami.websiteId | quote }}
+            {{- end }}
+            {{- if .cvd.url }}
+            - name: CVD_URL
+              value: {{ .cvd.url | quote }}
+            {{- end }}
+            {{- if .cvd.cacheTtl }}
+            - name: CVD_CACHE_TTL
+              value: {{ .cvd.cacheTtl | quote }}
+            {{- end }}
+            {{- if .cvd.timeout }}
+            - name: CVD_TIMEOUT
+              value: {{ .cvd.timeout | quote }}
             {{- end }}
           {{- end }}
           {{- end }}
