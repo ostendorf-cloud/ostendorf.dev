@@ -31,7 +31,7 @@ func TestPrerenderedSitemapIsTheServedSitemap(t *testing.T) {
 	}
 	cfg := testCfg()
 	cfg.SiteURL = site
-	h, err := buildHandler(cfg, slog.New(slog.DiscardHandler), nil)
+	h, err := buildHandler(cfg, slog.New(slog.DiscardHandler), nil, nil)
 	if err != nil {
 		t.Fatalf("buildHandler() error = %v", err)
 	}
