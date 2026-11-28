@@ -20,6 +20,7 @@ import (
 	"github.com/ostendorf-cloud/govue/metrics"
 
 	"github.com/ostendorf-cloud/ostendorf.dev/internal/config"
+	"github.com/ostendorf-cloud/ostendorf.dev/internal/content"
 	"github.com/ostendorf-cloud/ostendorf.dev/internal/webapp"
 )
 
@@ -63,7 +64,15 @@ func runApp(ctx context.Context, cfg config.Config, logger *slog.Logger, serve s
 	}
 	logViewsStatus(logger, cfg, views)
 
-	handler, err := buildHandler(cfg, logger, views)
+	// The store never touches readiness: a cvd that is down changes the data
+	// pages only, never the probes.
+	store, err := content.FromConfig(cfg.CVD, nil, logger)
+	if err != nil {
+		_ = views.Close(context.Background())
+		return err
+	}
+
+	handler, err := buildHandler(cfg, logger, views, store)
 	if err != nil {
 		_ = views.Close(context.Background())
 		return err
@@ -132,8 +141,9 @@ func newResolver(cfg config.Config) *clientip.Resolver {
 // the pages and logger receiving the access log. A real application adding
 // a session, a form or a rate limiter wires govue's own middleware pieces
 // in here too, but never between the mux and views, which reads the route
-// pattern the mux sets; see AGENTS.md.
-func buildHandler(cfg config.Config, logger *slog.Logger, views *analytics.Client) (http.Handler, error) {
+// pattern the mux sets; see internal/webapp/AGENTS.md. store supplies the cv document to the
+// pages that render it.
+func buildHandler(cfg config.Config, logger *slog.Logger, views *analytics.Client, store webapp.DocumentSource) (http.Handler, error) {
 	dist, err := fs.Sub(distFS, "dist")
 	if err != nil {
 		return nil, fmt.Errorf("website: %w", err)
@@ -148,6 +158,7 @@ func buildHandler(cfg config.Config, logger *slog.Logger, views *analytics.Clien
 		Views:    views,
 		Logger:   logger,
 		ClientIP: newResolver(cfg),
+		Content:  store,
 	}, dist, prerendered)
 }
 

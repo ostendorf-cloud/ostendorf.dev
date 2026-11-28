@@ -125,6 +125,18 @@ config:
     url: ""
     # UMAMI_WEBSITE_ID: the website's UUID in Umami.
     websiteId: ""
+  # cvd, the cv service the data pages read at runtime. Nothing here is a
+  # secret. Without a URL the site starts and serves a placeholder on the
+  # data pages.
+  cvd:
+    # CVD_URL: base URL of cvd, https or http, no credentials.
+    url: ""
+    # CVD_CACHE_TTL: age after which a request triggers a refresh. The
+    # application default is 5m when left empty.
+    cacheTtl: ""
+    # CVD_TIMEOUT: bound of one call to cvd, 1s to 30s. The application
+    # default is 5s when left empty.
+    timeout: ""
 
 resources:
   requests:

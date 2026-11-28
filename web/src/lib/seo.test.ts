@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import { routeTable } from './routeTable'
-import { canonical, descriptions, NOT_FOUND, path, titles } from './seo'
+import { canonical, descriptions, NOT_FOUND, path, titles, UNAVAILABLE } from './seo'
 
 // titles and descriptions are kept separate from routes.json
 // deliberately (see seo.ts), which only stays safe as long as this test
@@ -9,7 +9,7 @@ import { canonical, descriptions, NOT_FOUND, path, titles } from './seo'
 // entry for a name that is not a real route.
 
 describe('titles', () => {
-  const wantNames = new Set([...routeTable.map((entry) => entry.name), NOT_FOUND])
+  const wantNames = new Set([...routeTable.map((entry) => entry.name), NOT_FOUND, UNAVAILABLE])
 
   it.each(routeTable)('has a title for routes.json entry $name', (entry) => {
     expect(titles[entry.name]).toBeDefined()
@@ -17,6 +17,10 @@ describe('titles', () => {
 
   it('has a title for the 404 page', () => {
     expect(titles[NOT_FOUND]).toBeDefined()
+  })
+
+  it('has a title for the unavailable page', () => {
+    expect(titles[UNAVAILABLE]).toBeDefined()
   })
 
   it('has no title for a name that is not a real route', () => {
@@ -31,7 +35,7 @@ describe('titles', () => {
 })
 
 describe('descriptions', () => {
-  const wantNames = new Set([...routeTable.map((entry) => entry.name), NOT_FOUND])
+  const wantNames = new Set([...routeTable.map((entry) => entry.name), NOT_FOUND, UNAVAILABLE])
 
   it.each(routeTable)('has a description for routes.json entry $name', (entry) => {
     expect(descriptions[entry.name]).toBeDefined()
@@ -39,6 +43,10 @@ describe('descriptions', () => {
 
   it('has a description for the 404 page', () => {
     expect(descriptions[NOT_FOUND]).toBeDefined()
+  })
+
+  it('has a description for the unavailable page', () => {
+    expect(descriptions[UNAVAILABLE]).toBeDefined()
   })
 
   it('has no description for a name that is not a real route', () => {
@@ -73,5 +81,9 @@ describe('path and canonical', () => {
 
   it('builds a canonical URL for the 404 page without throwing', () => {
     expect(() => canonical(NOT_FOUND)).not.toThrow()
+  })
+
+  it('resolves the unavailable page to the root path', () => {
+    expect(path(UNAVAILABLE)).toBe('/')
   })
 })

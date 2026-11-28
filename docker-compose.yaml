@@ -13,6 +13,9 @@ services:
       UMAMI_URL: "${UMAMI_URL:-}"
       UMAMI_WEBSITE_ID: "${UMAMI_WEBSITE_ID:-}"
       TRUSTED_PROXIES: "${TRUSTED_PROXIES:-}"
+      # Without an address the data pages answer the placeholder. An empty
+      # value counts as unset.
+      CVD_URL: "${CVD_URL:-}"
     ports:
       - "127.0.0.1:8080:8080"
       - "127.0.0.1:8081:8081"

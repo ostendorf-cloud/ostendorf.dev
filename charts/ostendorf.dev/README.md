@@ -100,6 +100,9 @@ See `values.yaml` for the full, commented list. The ones most deployments touch:
 | `httpRoute.parentRefs.sectionName` | Specific listener on the `Gateway` to attach to, when it exposes more than one | `""` |
 | `config.umami.url` | `UMAMI_URL`: base URL of the Umami instance. Not a secret. Page views are counted only when this and `config.umami.websiteId` are both set; one alone fails the start. See `docs/analytics.md` in the repository. | `""` |
 | `config.umami.websiteId` | `UMAMI_WEBSITE_ID`: UUID of the website in Umami. Not a secret. | `""` |
+| `config.cvd.url` | `CVD_URL`: base URL of `cvd`, the cv service the data pages read at runtime. Not a secret. Empty starts the site and serves a placeholder with status 503 on the data pages. | `""` |
+| `config.cvd.cacheTtl` | `CVD_CACHE_TTL`: Go duration after which a request triggers a refresh. Empty keeps the application default of `5m`. | `""` |
+| `config.cvd.timeout` | `CVD_TIMEOUT`: Go duration bounding one call to `cvd`, 1s to 30s. Empty keeps the application default of `5s`. | `""` |
 | `config.trustedProxyCidrs` | `TRUSTED_PROXIES`: CIDRs of the `Ingress` controller or `Gateway` in front. Without it every request comes from the proxy and nothing is counted. | `""` |
 | `resources` | Pod resource requests/limits | see `values.yaml` |
 
@@ -110,6 +113,14 @@ See `values.yaml` for the full, commented list. The ones most deployments touch:
 - `values.schema.json` accepts `http://` or `https://` for `config.umami.url` and does not
   restrict the host. The application is stricter and refuses to start with plain `http` unless
   the host is `localhost`, a loopback address or a name inside the cluster. Use `https` otherwise.
+
+### cvd notes
+
+- The site reads `cvd` on a request, never at startup. Readiness does not depend on it.
+- A change in `cv` reaches the site after the cache expires, not after a new rollout.
+- The pod needs an egress path to `cvd`. The chart ships no network policy.
+- `values.schema.json` checks the shape of the URL and of both durations. The application checks
+  the 1s to 30s range of the timeout and refuses to start outside it.
 
 ## Upgrading
 

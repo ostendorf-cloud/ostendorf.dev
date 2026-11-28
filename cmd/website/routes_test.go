@@ -54,6 +54,12 @@ func TestPrerenderedOutputMatchesRouteTable(t *testing.T) {
 			// route table.
 			continue
 		}
+		if file == "unavailable.html" {
+			// Not a route: the 503 placeholder a data page answers with
+			// while cvd has delivered no document, served by
+			// serveUnavailable rather than through the route table.
+			continue
+		}
 		if file == "sitemap.xml" {
 			// Not a page: the build time copy of the sitemap that
 			// govue-check-legal reads. TestPrerenderedSitemapIsTheServedSitemap

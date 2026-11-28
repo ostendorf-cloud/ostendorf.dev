@@ -29,6 +29,10 @@ type Config struct {
 	// ClientIP resolves the client address the access log writes, behind
 	// the trusted proxies. Nil leaves the address out of the log.
 	ClientIP *clientip.Resolver
+	// Content supplies the cv document to the pages that render it. Nil
+	// means cvd is not configured, and those pages answer the 503
+	// placeholder.
+	Content DocumentSource
 }
 
 // handler carries the one piece of request-independent state the sitemap
@@ -87,6 +91,7 @@ func newMux(cfg Config, dist, prerendered fs.FS) (*http.ServeMux, error) {
 	if err != nil {
 		return nil, err
 	}
+	pages.content = cfg.Content
 	h := &handler{siteURL: cfg.SiteURL}
 
 	mux := http.NewServeMux()

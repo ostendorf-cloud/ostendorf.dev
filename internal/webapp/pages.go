@@ -1,6 +1,6 @@
 // Package webapp builds the website's one HTTP handler: the built SPA's
 // assets, the prerendered HTML per route, robots.txt and sitemap.xml, all
-// read from internal/routes' one route table. See AGENTS.md for how each
+// read from internal/routes' one route table. See internal/routes/AGENTS.md for how each
 // of this table's five consumers reads it.
 package webapp
 
@@ -95,6 +95,9 @@ type pageServer struct {
 	// can be exercised in a test against a route set routes.json itself
 	// does not have to provide.
 	routes map[string]string
+	// content supplies the cv document to the data pages. Nil means cvd is
+	// not configured: every data page then answers the 503 placeholder.
+	content DocumentSource
 }
 
 // newPageServer validates that dist carries the assets/ directory the SPA

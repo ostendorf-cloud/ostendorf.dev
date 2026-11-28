@@ -37,6 +37,11 @@ const { locale } = useLanguage()
         Die Website wird auf eigener Hardware in Deutschland betrieben. Einen Hosting-Anbieter
         setzen wir dafür nicht ein.
       </p>
+      <p>
+        Die Inhalte zu Projekten, Fähigkeiten und Werkzeugen lädt der Server dieser Website bei
+        Bedarf von einem eigenen Dienst ab, von Server zu Server. Dieser Abruf enthält keine Daten
+        über Sie, und Ihr Browser nimmt dazu keinen Kontakt zu einem anderen Server auf.
+      </p>
 
       <h2 class="text-xl font-semibold">Zugriffsprotokolle</h2>
       <p>
@@ -178,6 +183,11 @@ const { locale } = useLanguage()
 
       <h2 class="text-xl font-semibold">Operation of the site</h2>
       <p>The site is operated on our own hardware in Germany. We use no hosting provider for it.</p>
+      <p>
+        The server of this site loads the content on projects, skills and tools from a service of
+        our own when needed, from server to server. This call carries no data about you, and your
+        browser contacts no other server for it.
+      </p>
 
       <h2 class="text-xl font-semibold">Access logs</h2>
       <p>

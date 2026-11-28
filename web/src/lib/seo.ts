@@ -12,6 +12,11 @@ export const SITE_URL = import.meta.env.VITE_SITE_URL ?? 'https://ostendorf.dev'
  *  derived from it. */
 export const NOT_FOUND = 'notFound' as const
 
+/** UNAVAILABLE is the placeholder a data page answers with, status 503,
+ *  while cvd has delivered no document yet. It is a pseudo route for the
+ *  same reason as NOT_FOUND. */
+export const UNAVAILABLE = 'unavailable' as const
+
 /** PageRoute is every route this milestone prerenders: every name
  *  routes.json carries, plus the 404 page. A plain string rather than a
  *  literal union: routes.json is read at build time, not known to the
@@ -27,6 +32,7 @@ const paths: Record<string, string> = Object.fromEntries(
   routeTable.map((entry): [string, string] => [entry.name, routePath(entry)]),
 )
 paths[NOT_FOUND] = '/'
+paths[UNAVAILABLE] = '/'
 
 /** path is the absolute path of route: it starts with a slash and ends
  *  with one, except for an exact route (the legal pages), which is
@@ -59,6 +65,7 @@ export const titles: Record<string, string> = {
   'privacy-de': 'Datenschutzerklärung',
   'privacy-en': 'Privacy policy',
   notFound: 'Page not found',
+  unavailable: 'Temporarily unavailable',
 }
 
 export const descriptions: Record<string, string> = {
@@ -68,6 +75,7 @@ export const descriptions: Record<string, string> = {
   'privacy-de': 'Datenschutzerklärung von ostendorf.dev.',
   'privacy-en': 'Privacy policy of ostendorf.dev.',
   notFound: 'The page you were looking for does not exist.',
+  unavailable: 'This page is temporarily unavailable. Please try again in a minute.',
 }
 
 /** pageMeta resolves the title and meta description of route. */
