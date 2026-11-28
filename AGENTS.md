@@ -21,6 +21,17 @@ application.
   one error. `SiteURL` (`SITE_URL`, default `https://ostendorf.dev`) is the base
   `internal/webapp`'s `robots.txt` and `sitemap.xml` build every URL from. There is no
   secret-shaped variable yet: no session, no OIDC, no CSRF and no form exist in this milestone.
+- `internal/content` reads the cv document from `cvd` at runtime through the public client of the
+  `cv` module (`github.com/ostendorf-cloud/cv/client`, a pseudo-version until `cv` tags a
+  release). Config (`CVD_URL`, `CVD_CACHE_TTL`, `CVD_TIMEOUT`) lives in `internal/config`, the
+  `Store` is built in `cmd/website/main.go` from one client per language (`de`, `en`) and handed
+  to `internal/webapp` as `Config.Content`. ADR 0001 is the policy: fetch on a request, a copy per
+  language, one shared refresh after the cache age, the old copy served meanwhile, a 30s gap after
+  a failed read, the last good copy kept in memory. Without a copy a data page answers 503 with
+  `Retry-After: 30` and the prerendered `unavailable.html`, built like the 404 page and not a
+  `routes.json` entry. A change in `cv` reaches the site after the cache age, not after a
+  rebuild. Readiness never depends on `cvd`. `webapp`'s `dataHandler` wraps a data page's
+  renderer and is unused until the projects and skills pages exist.
 - Page views are counted on the server by govue's `analytics` package, adopted as is. Config
   (`UMAMI_URL`, `UMAMI_WEBSITE_ID`, `TRUSTED_PROXIES`) lives in `internal/config`, the client is
   built in `cmd/website/main.go` and closed on shutdown, and `internal/webapp.NewHandler` wraps
@@ -164,11 +175,10 @@ footer, the theme switch, the home page's own heading and the predecessor's prof
 built output. None of the site's other content is implemented yet. Left out, tracked as later
 milestones, each adding its own route to `internal/routes/routes.json` and its own nav item:
 
-- Projects, read at runtime from `cvd`, the `cv` repository's service, with their hand written
-  descriptions and the GitHub languages and latest release `cvd` holds. This waits on two
-  changes in `cv`: GitHub enrichment in `cvd` and a public client package. ADR 0001 records
-  the cache, retry and placeholder policy, and the concept doc the configuration.
-- Skills and tools, read from the same `cvd` document.
+- The projects page, rendered from the `cvd` document with their hand written descriptions and
+  the GitHub languages and latest release `cvd` holds. The client, the cache and the 503
+  placeholder exist in `internal/content` and `internal/webapp`.
+- The skills and tools page, rendered from the same document.
 - A contact form, ported later from `ostendorf.tech`: proof of work in the browser, SMTP
   delivery, no third party.
 - A uses page: setup, tools, homelab.
